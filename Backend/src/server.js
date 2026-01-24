@@ -15,11 +15,11 @@ app.get("/health", (req, res) => {
 
 // make our app ready for deployment
 if (ENV.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "Frontend", "dist")));
+  app.use(express.static(path.join(__dirname, "../Frontend", "dist")));
 
   // Catch-all: serve index.html for any route not starting with /api or /books or /health
-  app.get(/^\/(?!api|books|health).*/, (req, res) => {
-    res.sendFile(path.join(__dirname, "Frontend", "dist", "index.html"));
+  app.get("/{*any}", (req, res) => {
+    res.sendFile(path.join(__dirname, "../Frontend", "dist", "index.html"));
   });
 }
 
