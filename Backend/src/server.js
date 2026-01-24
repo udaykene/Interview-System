@@ -2,12 +2,12 @@ import express from "express";
 import { ENV } from "./lib/env.js";
 import path from "path";
 
-const port = 3000 || process.env.PORT;
+const port = process.env.PORT || 3000;
 const app = express();
 const __dirname = path.resolve();
 
 app.get("/books", (req, res) => {
-  res.status(200).json({msg:"This is the root route"});
+  res.status(200).json({msg:"This is the books route"});
 });
 app.get("/health", (req, res) => {
   res.status(200).json({msg:"This is the health route"});
@@ -15,13 +15,14 @@ app.get("/health", (req, res) => {
 
 // make our app ready for deployment
 if (ENV.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "Frontend","dist")));
+  app.use(express.static(path.join(__dirname, "Frontend", "dist")));
 
-  app.get("/{*splat}", (req, res) => {
-    res.sendFile(path.resolve(__dirname, "Frontend", "dist", "index.html"));
+  // Catch-all: serve index.html for any route not starting with /api or /books or /health
+  app.get(/^\/(?!api|books|health).*/, (req, res) => {
+    res.sendFile(path.join(__dirname, "Frontend", "dist", "index.html"));
   });
 }
 
-app.listen(ENV.PORT, () => {
+app.listen(port, () => {
   console.log(`Server is listening on port:${port}`);
 });
