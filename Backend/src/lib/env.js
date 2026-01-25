@@ -1,5 +1,5 @@
 import dotenv from 'dotenv'
-dotenv.config()
+dotenv.config({quiet:true})//Stop the .env warning in the terminal 
 
 export const ENV = {
     PORT:process.env.PORT,

@@ -1,16 +1,17 @@
 import express from "express";
 import { ENV } from "./lib/env.js";
 import path from "path";
+import connectDB from "./lib/db.js";
+import { start } from "repl";
 
-const port = process.env.PORT || 3000;
 const app = express();
 const __dirname = path.resolve();
 
 app.get("/books", (req, res) => {
-  res.status(200).json({msg:"This is the books route"});
+  res.status(200).json({ msg: "This is the books route" });
 });
 app.get("/health", (req, res) => {
-  res.status(200).json({msg:"This is the health route"});
+  res.status(200).json({ msg: "This is the health route" });
 });
 
 // make our app ready for deployment
@@ -23,6 +24,15 @@ if (ENV.NODE_ENV === "production") {
   });
 }
 
-app.listen(port, () => {
-  console.log(`Server is listening on port:${port}`);
-});
+const startServer = async () => {
+  try {
+    await connectDB();
+    app.listen(ENV.PORT, () =>
+      console.log(`Server is listening on port:${ENV.PORT}`),
+    );
+  } catch (error) {
+    console.error("❌Error in starting the server", error);
+  }
+};
+
+startServer();
