@@ -1,5 +1,5 @@
 import { Inngest } from "inngest";
-import connectDB  from "./db.js";
+import {connectDB}  from "./db.js";
 import User from "../models/User.js";
 
 export const inngest = new Inngest({ id: "interview-system" });
@@ -8,31 +8,20 @@ const syncUser = inngest.createFunction(
   { id: "sync-user" },
   { event: "clerk/user.created" },
   async ({ event }) => {
-    try {
-      await connectDB();
+    await connectDB();
 
-      const { id, email_address, first_name, last_name, image_url } = event.data;
+    const { id, email_address, first_name, last_name, image_url } = event.data;
 
-      console.log("Event data:", event.data);
+    const newUser = {
+      clerkId: id,
+      email: email_addresses[0]?.email_address,
+      name: `${first_name || ""} ${last_name || ""}`,
+      profileImage: image_url,
+    };
 
-      const newUser = {
-        clerkId: id,
-        email: email_address[0]?.email_address,
-        name: `${first_name || ""} ${last_name || ""}`.trim(),
-        profileImage: image_url,
-      };
+    await User.create(newUser);
 
-      console.log("New user object:", newUser);
-
-      await User.create(newUser);
-
-      console.log("User created successfully:", newUser.clerkId);
-
-      // Todo:do something else
-    } catch (error) {
-      console.error("Error in syncUser function:", error);
-      throw error; // Re-throw to let Inngest handle it
-    }
+    // Todo:do something else
   },
 );
 

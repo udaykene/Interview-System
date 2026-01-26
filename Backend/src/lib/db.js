@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { ENV } from "./env.js";
 
-const connectDB = async () => {
+export const connectDB = async () => {
   try {
     if(!ENV.DB_URL){
       throw new Error("DB_URL is not defined in enviornment variables")
@@ -14,4 +14,3 @@ const connectDB = async () => {
   }
 };
 
-export default connectDB;
