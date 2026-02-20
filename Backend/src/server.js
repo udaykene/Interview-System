@@ -4,7 +4,10 @@ import cors from "cors";
 import { ENV } from "./lib/env.js";
 import { connectDB } from "./lib/db.js";
 import { serve } from "inngest/express";
+import { clerkMiddleware } from "@clerk/express"; // this adds auth feild to req object : req.auth()
 import { functions, inngest } from "./lib/inngest.js";
+
+import chatRoutes from "./routes/chatRoutes.js"; // this is a route for chat
 const app = express();
 const __dirname = path.resolve();
 
@@ -16,11 +19,11 @@ app.use(
     credentials: true,
   }),
 );
+app.use(clerkMiddleware()); // this adds auth feild to req object : req.auth()
 app.use("/api/inngest", serve({ client: inngest, functions }));
+app.use("/api/chat", chatRoutes); // this is a route for chat
 
-app.get("/books", (req, res) => {
-  res.status(200).json({ msg: "This is the books route" });
-});
+// This route is to check if the server is running
 app.get("/health", (req, res) => {
   res.status(200).json({ msg: "This is the health route" });
 });
