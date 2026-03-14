@@ -6,7 +6,16 @@ import {  ArrowRightIcon,
   UsersIcon,
   VideoIcon,
   ZapIcon, } from "lucide-react";
-import { SignInButton } from "@clerk/clerk-react";
+const rawApiUrl = (import.meta.env.VITE_API_URL || "").trim();
+const normalizedApiUrl = (() => {
+  if (!rawApiUrl) return "/api";
+  const withoutTrailingSlash = rawApiUrl.replace(/\/+$/, "");
+  return /\/api$/i.test(withoutTrailingSlash)
+    ? withoutTrailingSlash
+    : `${withoutTrailingSlash}/api`;
+})();
+const authUrl = `${normalizedApiUrl}/auth`;
+
 const HomePage = () => {
   return (
     <div className="bg-gradient-to-br from-base-100 via-base-200 to-base-300">
@@ -33,12 +42,18 @@ const HomePage = () => {
           </Link>
 
           {/* AUTH BTN */}
-          <SignInButton mode="modal">
-            <button className="group px-6 py-3 bg-gradient-to-r from-primary to-secondary rounded-xl text-white font-semibold text-sm shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center gap-2">
-              <span>Get Started</span>
+          <div className="flex items-center gap-2">
+            <a
+              href={`${authUrl}/google`}
+              className="group px-6 py-3 bg-gradient-to-r from-primary to-secondary rounded-xl text-white font-semibold text-sm shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 flex items-center gap-2"
+            >
+              <span>Continue with Google</span>
               <ArrowRightIcon className="size-4 group-hover:translate-x-0.5 transition-transform" />
-            </button>
-          </SignInButton>
+            </a>
+            <a href={`${authUrl}/github`} className="btn btn-outline">
+              Continue with GitHub
+            </a>
+          </div>
         </div>
       </nav>
 
@@ -84,12 +99,14 @@ const HomePage = () => {
 
             {/* CTA Buttons */}
             <div className="flex flex-wrap gap-4">
-              <SignInButton mode="modal">
-                <button className="btn btn-primary btn-lg">
-                  Start Coding Now
-                  <ArrowRightIcon className="size-5" />
-                </button>
-              </SignInButton>
+              <a href={`${authUrl}/google`} className="btn btn-primary btn-lg">
+                Start Coding Now
+                <ArrowRightIcon className="size-5" />
+              </a>
+
+              <a href={`${authUrl}/github`} className="btn btn-outline btn-lg">
+                GitHub Login
+              </a>
 
               <button className="btn btn-outline btn-lg">
                 <VideoIcon className="size-5" />

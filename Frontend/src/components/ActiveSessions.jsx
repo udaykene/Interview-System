@@ -61,6 +61,9 @@ function ActiveSessions({ sessions, isLoading, isUserInSession }) {
                           {session.difficulty.slice(0, 1).toUpperCase() +
                             session.difficulty.slice(1)}
                         </span>
+                        {session.visibility === "private" && (
+                          <span className="badge badge-outline badge-sm">Private</span>
+                        )}
                       </div>
 
                       <div className="flex items-center gap-4 text-sm opacity-80">

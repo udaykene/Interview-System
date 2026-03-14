@@ -1,65 +1,67 @@
 import Editor from "@monaco-editor/react";
-import { Loader2Icon, PlayIcon } from "lucide-react";
 import { LANGUAGE_CONFIG } from "../data/problems";
 
 function CodeEditorPanel({
   selectedLanguage,
   code,
-  isRunning,
   onLanguageChange,
   onCodeChange,
-  onRunCode,
+  remoteTyping,
 }) {
   return (
-    <div className="h-full bg-base-300 flex flex-col">
-      <div className="flex items-center justify-between px-4 py-3 bg-base-100 border-t border-base-300">
-        <div className="flex items-center gap-3">
-          <img
-            src={LANGUAGE_CONFIG[selectedLanguage].icon}
-            alt={LANGUAGE_CONFIG[selectedLanguage].name}
-            className="size-6"
-          />
-          <select className="select select-sm" value={selectedLanguage} onChange={onLanguageChange}>
-            {Object.entries(LANGUAGE_CONFIG).map(([key, lang]) => (
-              <option key={key} value={key}>
-                {lang.name}
-              </option>
-            ))}
-          </select>
+    <div style={{ height: '100%', background: 'var(--bg-card)', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ padding: '8px 16px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--bg-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <img src={LANGUAGE_CONFIG[selectedLanguage]?.icon} alt={LANGUAGE_CONFIG[selectedLanguage]?.name} style={{ width: 16, height: 16 }} />
+            <select 
+              className="select select-sm" 
+              value={selectedLanguage} 
+              onChange={onLanguageChange}
+              style={{
+                background: 'transparent', border: 'none', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600,
+                outline: 'none', cursor: 'pointer', appearance: 'none', paddingRight: 16
+              }}
+            >
+              {Object.entries(LANGUAGE_CONFIG).map(([key, lang]) => (
+                <option key={key} value={key} style={{ background: 'var(--bg-card)', color: 'var(--text-primary)' }}>
+                  {lang.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <button className="btn btn-primary btn-sm gap-2" disabled={isRunning} onClick={onRunCode}>
-          {isRunning ? (
-            <>
-              <Loader2Icon className="size-4 animate-spin" />
-              Running...
-            </>
-          ) : (
-            <>
-              <PlayIcon className="size-4" />
-              Run Code
-            </>
-          )}
-        </button>
+        {remoteTyping && (
+          <div className="badge badge-purple" style={{ fontSize: 11, animation: 'pulse-glow 2s infinite' }}>
+            <div className="status-dot status-active" style={{ marginRight: 6 }} />
+            Peer is typing...
+          </div>
+        )}
       </div>
 
-      <div className="flex-1">
+      <div style={{ flex: 1 }}>
         <Editor
-          height={"100%"}
-          language={LANGUAGE_CONFIG[selectedLanguage].monacoLang}
+          height="100%"
+          language={LANGUAGE_CONFIG[selectedLanguage]?.monacoLang || 'javascript'}
           value={code}
           onChange={onCodeChange}
           theme="vs-dark"
           options={{
-            fontSize: 16,
+            fontSize: 14,
+            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
             lineNumbers: "on",
+            roundedSelection: false,
             scrollBeyondLastLine: false,
-            automaticLayout: true,
+            readOnly: false,
             minimap: { enabled: false },
+            padding: { top: 16, bottom: 16 },
+            wordWrap: 'on'
           }}
         />
       </div>
     </div>
   );
 }
+
 export default CodeEditorPanel;

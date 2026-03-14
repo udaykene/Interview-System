@@ -1,5 +1,5 @@
 import { Code2Icon, LoaderIcon, PlusIcon } from "lucide-react";
-import { PROBLEMS } from "../data/problems";
+import { useProblems } from "../hooks/useProblems";
 
 function CreateSessionModal({
   isOpen,
@@ -9,7 +9,8 @@ function CreateSessionModal({
   onCreateRoom,
   isCreating,
 }) {
-  const problems = Object.values(PROBLEMS);
+  const { data } = useProblems();
+  const problems = data?.problems || [];
 
   if (!isOpen) return null;
 
@@ -28,12 +29,14 @@ function CreateSessionModal({
 
             <select
               className="select w-full"
-              value={roomConfig.problem}
+              value={roomConfig.problemId || ""}
               onChange={(e) => {
-                const selectedProblem = problems.find((p) => p.title === e.target.value);
+                const selectedProblem = problems.find((p) => p.slug === e.target.value);
                 setRoomConfig({
                   difficulty: selectedProblem.difficulty,
-                  problem: e.target.value,
+                  problem: selectedProblem.title,
+                  problemId: selectedProblem.slug,
+                  visibility: roomConfig.visibility || "public",
                 });
               }}
             >
@@ -42,11 +45,35 @@ function CreateSessionModal({
               </option>
 
               {problems.map((problem) => (
-                <option key={problem.id} value={problem.title}>
+                <option key={problem.slug} value={problem.slug}>
                   {problem.title} ({problem.difficulty})
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* VISIBILITY */}
+          <div className="space-y-2">
+            <label className="label">
+              <span className="label-text font-semibold">Session Type</span>
+            </label>
+            <div className="flex gap-3">
+              <button
+                className={`btn ${roomConfig.visibility === "public" ? "btn-primary" : "btn-ghost"}`}
+                onClick={() => setRoomConfig({ ...roomConfig, visibility: "public" })}
+              >
+                Public
+              </button>
+              <button
+                className={`btn ${roomConfig.visibility === "private" ? "btn-primary" : "btn-ghost"}`}
+                onClick={() => setRoomConfig({ ...roomConfig, visibility: "private" })}
+              >
+                Private
+              </button>
+            </div>
+            <p className="text-sm text-base-content/60">
+              Private sessions require a join code. Public sessions appear in the live list.
+            </p>
           </div>
 
           {/* ROOM SUMMARY */}
@@ -57,6 +84,9 @@ function CreateSessionModal({
                 <p className="font-semibold">Room Summary:</p>
                 <p>
                   Problem: <span className="font-medium">{roomConfig.problem}</span>
+                </p>
+                <p>
+                  Type: <span className="font-medium">{roomConfig.visibility}</span>
                 </p>
                 <p>
                   Max Participants: <span className="font-medium">2 (1-on-1 session)</span>
