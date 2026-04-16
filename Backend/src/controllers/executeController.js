@@ -1,6 +1,8 @@
+import axios from "axios";
 import Problem from "../models/Problem.js";
+import { ENV } from "../lib/env.js";
 
-const PISTON_API = "https://emkc.org/api/v2/piston";
+const PISTON_API = ENV.PISTON_API || "https://emkc.org/api/v2/piston";
 
 const LANGUAGE_MAP = {
   javascript: { language: "javascript", version: "18.15.0" },
@@ -54,19 +56,26 @@ async function executePiston(language, code, stdin = "") {
 
   const filename = language === "java" ? "Main.java" : `solution.${language === "javascript" ? "js" : language === "python" ? "py" : "java"}`;
 
-  const response = await fetch(`${PISTON_API}/execute`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      language: lang.language,
-      version: lang.version,
-      files: [{ name: filename, content: code }],
-      stdin: stdin,
-    }),
-  });
+  try {
+    const headers = {};
+    if (ENV.PISTON_API_KEY) headers["Authorization"] = `Bearer ${ENV.PISTON_API_KEY}`;
 
-  if (!response.ok) throw new Error("Piston API error");
-  return response.json();
+    const { data } = await axios.post(
+      `${PISTON_API}/execute`,
+      {
+        language: lang.language,
+        version: lang.version,
+        files: [{ name: filename, content: code }],
+        stdin: stdin,
+      },
+      { timeout: 15000, headers }
+    );
+    return data;
+  } catch (error) {
+    const status = error.response?.status;
+    const detail = error.response?.data?.message || error.response?.data?.error || error.message;
+    throw new Error(`Piston API error${status ? ` (${status})` : ""}: ${detail}`);
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -94,12 +103,14 @@ export async function runCode(req, res) {
 // Submit Code (run against test cases)
 // ─────────────────────────────────────────────
 export async function submitCode(req, res) {
-  const { language, code, problemSlug } = req.body;
-  if (!language || !code || !problemSlug)
-    return res.status(400).json({ message: "language, code and problemSlug are required" });
+  const { language, code, problemId, problemSlug } = req.body;
+  if (!language || !code || (!problemId && !problemSlug))
+    return res.status(400).json({ message: "language, code and problem identifier are required" });
 
   try {
-    const problem = await Problem.findOne({ slug: problemSlug });
+    const { problemId, problemSlug } = req.body;
+    const query = problemId ? { _id: problemId } : { slug: problemSlug };
+    const problem = await Problem.findOne(query);
     if (!problem) return res.status(404).json({ message: "Problem not found" });
 
     const testCases = problem.testCases || [];

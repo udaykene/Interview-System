@@ -48,7 +48,7 @@ function ProblemPage() {
       const res = await axiosInstance.post('/execute/run', { language: selectedLanguage, code });
       setOutput({ type: 'run', data: res.data });
     } catch (err) {
-      setOutput({ type: 'run', data: { error: err.response?.data?.error || err.message } });
+      setOutput({ type: 'run', data: { error: err.response?.data?.message || err.response?.data?.error || err.message } });
     } finally {
       setIsRunning(false);
     }
@@ -72,7 +72,7 @@ function ProblemPage() {
         toast.error(`Submission failed: ${res.data.status}`);
       }
     } catch (err) {
-      setOutput({ type: 'submit', data: { status: 'Error', error: err.response?.data?.error || err.message } });
+      setOutput({ type: 'submit', data: { status: 'Error', error: err.response?.data?.message || err.response?.data?.error || err.message } });
       toast.error("Execution failed");
     } finally {
       setIsSubmitting(false);

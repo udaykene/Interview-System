@@ -27,4 +27,6 @@ export const ENV = {
   EMAIL_SMTP_PORT: process.env.EMAIL_SMTP_PORT || "587",
   EMAIL_SMTP_USER: process.env.EMAIL_SMTP_USER || "interviewsys@gmail.com",
   EMAIL_SMTP_PASS: process.env.EMAIL_SMTP_PASS || "paeeidcfxhtoxchq",
+  PISTON_API: process.env.PISTON_API || "https://emkc.org/api/v2/piston",
+  PISTON_API_KEY: process.env.PISTON_API_KEY,
 };
