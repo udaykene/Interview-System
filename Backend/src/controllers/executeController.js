@@ -43,7 +43,7 @@ try:
 except Exception as e:
     print(f"TEST_${i}:ERROR:{e}")`;
     }).join("\n");
-    return `${functionCode}\n${testsCode}`;
+    return `${functionCode}\n\n# Map JSON literals to Python equivalents for test cases\ntrue = True\nfalse = False\nnull = None\n\n${testsCode}`;
   }
 
   // Java - just run straight (complex to inject)
@@ -144,12 +144,27 @@ export async function submitCode(req, res) {
 
       const parts = line.split(":");
       const status = parts[1];
-      const actual = parts[2] || "";
+
+      let actual = "";
+      if (status === "PASS") {
+        actual = line.substring(`TEST_${i}:PASS:`.length);
+      } else if (status === "FAIL") {
+        const failPrefix = `TEST_${i}:FAIL:`;
+        const expectedSuffixIndex = line.lastIndexOf(":EXPECTED:");
+        if (expectedSuffixIndex !== -1) {
+          actual = line.substring(failPrefix.length, expectedSuffixIndex);
+        } else {
+          actual = line.substring(failPrefix.length);
+        }
+      }
+
       return {
         index: i,
         status: status === "PASS" ? "pass" : status === "FAIL" ? "fail" : "error",
-        actual,
-        expected: tc.expectedOutput,
+        passed: status === "PASS",
+        error: status !== "PASS" && status !== "FAIL" ? line.substring(`TEST_${i}:ERROR:`.length) : null,
+        actualOutput: actual,
+        expectedOutput: tc.expectedOutput,
         input: tc.isHidden ? "Hidden" : tc.input,
         isHidden: tc.isHidden,
       };
@@ -166,9 +181,9 @@ export async function submitCode(req, res) {
     await problem.save();
 
     res.status(200).json({
-      status: allPassed ? "accepted" : "wrong_answer",
-      passed,
-      total,
+      status: allPassed ? "Accepted" : "Wrong Answer",
+      passedTests: passed,
+      totalTests: total,
       results: testResults,
       stderr: rawError,
     });

@@ -30,7 +30,7 @@ function App() {
     <>
       <Routes>
         {/* Public Routes */}
-        <Route path="/" element={!isSignedIn ? <HomePage /> : <Navigate to="/dashboard" />} />
+        <Route path="/" element={<HomePage />} />
         <Route path="/login" element={!isSignedIn ? <LoginPage /> : <Navigate to="/dashboard" />} />
         <Route path="/signup" element={!isSignedIn ? <SignupPage /> : <Navigate to="/dashboard" />} />
         <Route path="/forgot-password" element={!isSignedIn ? <ForgotPasswordPage /> : <Navigate to="/dashboard" />} />
