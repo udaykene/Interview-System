@@ -5,7 +5,7 @@ import { useProblem } from "../hooks/useProblems";
 import { useAuth } from "../context/AuthContextState";
 import Navbar from "../components/Navbar";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { Loader2, LogOut, Code2, Users, AlertCircle, Play, CheckCircle2, Copy } from "lucide-react";
+import { Loader2, LogOut, Code2, Users, AlertCircle, Play, CheckCircle2 } from "lucide-react";
 import CodeEditorPanel from "../components/CodeEditorPanel";
 import OutputPanel from "../components/OutputPanel";
 import useStreamClient from "../hooks/useStreamClient";
@@ -48,7 +48,7 @@ function SessionPage() {
   const socketRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  // Auto-join logic
+  // 1. Auto-join logic
   useEffect(() => {
     const codeParam = searchParams.get("code");
     if (codeParam) setJoinCode(codeParam.toUpperCase());
@@ -58,6 +58,7 @@ function SessionPage() {
     if (!session || !user || loadingSession) return;
     if (isHost || isParticipant) return;
     if (session.visibility === "private" && !joinCode && !searchParams.get("code")) return;
+    
     joinSessionMutation.mutate({ id, code: searchParams.get("code") || joinCode }, { onSuccess: refetch });
   }, [session, user, loadingSession, isHost, isParticipant, id, searchParams, joinCode]);
 
@@ -66,18 +67,26 @@ function SessionPage() {
     if (session.status === "completed") navigate("/dashboard", { replace: true });
   }, [session, loadingSession, navigate]);
 
-  // Socket.IO
+  // 2. Initialize Socket.IO
   useEffect(() => {
     if (!token || !session || loadingSession || (!isHost && !isParticipant)) return;
+
     const socket = getSocket(token);
     socketRef.current = socket;
+
     socket.emit("join-session", { sessionId: id });
+
     socket.on("code-update", ({ code: newCode, language: newLang, from }) => {
-      if (from !== user.id) { setCode(newCode); if (newLang !== selectedLanguage) setSelectedLanguage(newLang); }
+      if (from !== user.id) {
+        setCode(newCode);
+        if (newLang !== selectedLanguage) setSelectedLanguage(newLang);
+      }
     });
+
     socket.on("language-update", ({ language: newLang, from }) => {
       if (from !== user.id) setSelectedLanguage(newLang);
     });
+
     socket.on("user-typing", ({ userId }) => {
       if (userId !== user.id) {
         setRemoteTyping(true);
@@ -85,24 +94,39 @@ function SessionPage() {
         typingTimeoutRef.current = setTimeout(() => setRemoteTyping(false), 2000);
       }
     });
-    return () => { socket.off("code-update"); socket.off("language-update"); socket.off("user-typing"); };
+
+    return () => {
+      socket.off("code-update");
+      socket.off("language-update");
+      socket.off("user-typing");
+      // Don't disconnect here if they navigate between rooms, just leave room if needed
+      // but let's just keep it simple
+    };
   }, [id, token, session, loadingSession, isHost, isParticipant, user?.id, selectedLanguage]);
 
-  // Initial code
+  // 3. Set initial code from session DB or problem starter code
   useEffect(() => {
     if (session && problem) {
       if (session.selectedLanguage) setSelectedLanguage(session.selectedLanguage);
+      
       const savedCode = session.sharedCode?.[session.selectedLanguage || selectedLanguage];
-      if (savedCode) { setCode(savedCode); }
-      else if (problem.starterCode?.[session.selectedLanguage || selectedLanguage]) { setCode(problem.starterCode[session.selectedLanguage || selectedLanguage]); }
+      if (savedCode) {
+        setCode(savedCode);
+      } else if (problem.starterCode?.[session.selectedLanguage || selectedLanguage]) {
+        setCode(problem.starterCode[session.selectedLanguage || selectedLanguage]);
+      }
     }
   }, [session, problem]);
 
+  // Handlers
   const handleLanguageChange = (e) => {
     const newLang = e.target.value;
     setSelectedLanguage(newLang);
+    
     const newCode = session?.sharedCode?.[newLang] || problem?.starterCode?.[newLang] || "";
-    setCode(newCode); setOutput(null);
+    setCode(newCode);
+    setOutput(null);
+
     socketRef.current?.emit("language-change", { sessionId: id, language: newLang });
     socketRef.current?.emit("code-change", { sessionId: id, code: newCode, language: newLang });
   };
@@ -115,29 +139,48 @@ function SessionPage() {
 
   const handleRunCode = async () => {
     if (!code.trim()) return;
-    setIsRunning(true); setOutput(null);
-    try { const res = await axiosInstance.post('/execute/run', { language: selectedLanguage, code }); setOutput({ type: 'run', data: res.data }); }
-    catch (err) { setOutput({ type: 'run', data: { error: err.response?.data?.message || err.response?.data?.error || err.message } }); }
-    finally { setIsRunning(false); }
+    setIsRunning(true);
+    setOutput(null);
+    try {
+      const res = await axiosInstance.post('/execute/run', { language: selectedLanguage, code });
+      setOutput({ type: 'run', data: res.data });
+    } catch (err) {
+      setOutput({ type: 'run', data: { error: err.response?.data?.error || err.message } });
+    } finally {
+      setIsRunning(false);
+    }
   };
 
   const handleSubmitCode = async () => {
     if (!code.trim() || !problem) return;
-    setIsSubmitting(true); setOutput(null);
+    setIsSubmitting(true);
+    setOutput(null);
     try {
-      const res = await axiosInstance.post('/execute/submit', { problemId: problem._id, language: selectedLanguage, code });
+      const res = await axiosInstance.post('/execute/submit', {
+        problemId: problem._id,
+        language: selectedLanguage,
+        code
+      });
       setOutput({ type: 'submit', data: res.data });
-      if (res.data.status === 'Accepted') toast.success("All test cases passed!");
-      else toast.error(`Submission failed: ${res.data.status}`);
+      if (res.data.status === 'Accepted') {
+        toast.success("All test cases passed!");
+      } else {
+        toast.error(`Submission failed: ${res.data.status}`);
+      }
     } catch (err) {
-      setOutput({ type: 'submit', data: { status: 'Error', error: err.response?.data?.message || err.response?.data?.error || err.message } });
+      setOutput({ type: 'submit', data: { status: 'Error', error: err.response?.data?.error || err.message } });
       toast.error("Execution failed");
-    } finally { setIsSubmitting(false); }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEndSession = () => {
     if (window.confirm("End this session for all participants?")) {
-      endSessionMutation.mutate(id, { onSuccess: () => { disconnectSocket(); navigate("/dashboard"); } });
+      endSessionMutation.mutate(id, { onSuccess: () => {
+        disconnectSocket();
+        navigate("/dashboard");
+      }});
     }
   };
 
@@ -150,84 +193,88 @@ function SessionPage() {
   };
 
   if (loadingSession || !session) return (
-    <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Loader2 size={28} className="animate-spin" color="var(--accent-violet)" />
+    <div className="min-h-screen animated-bg flex items-center justify-center">
+      <Loader2 size={32} className="animate-spin text-primary" />
     </div>
   );
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#050505' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)' }}>
       <Navbar />
+
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <PanelGroup direction="horizontal">
           {/* LEFT: PROBLEM & EDITOR */}
           <Panel defaultSize={70} minSize={40}>
             <PanelGroup direction="horizontal">
+              
               {/* PROBLEM DETAILS */}
               <Panel defaultSize={40} minSize={20}>
-                <div style={{ height: '100%', background: '#0a0a0a', borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+                <div style={{ height: '100%', background: 'var(--bg-secondary)', borderRight: '1px solid var(--bg-border)', display: 'flex', flexDirection: 'column' }}>
+                  
+                  {/* Problem Header */}
+                  <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--bg-border)', background: 'var(--bg-card)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
                       <div>
-                        <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10, letterSpacing: '-0.02em' }}>
+                        <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
                           {session.problem}
-                          <span className="badge" style={{ background: `${getDifficultyColor(session.difficulty)}12`, color: getDifficultyColor(session.difficulty), border: `1px solid ${getDifficultyColor(session.difficulty)}25` }}>
-                            {session.difficulty?.toUpperCase()}
+                          <span style={{ fontSize: 13, padding: '2px 8px', borderRadius: 4, background: `${getDifficultyColor(session.difficulty)}22`, color: getDifficultyColor(session.difficulty) }}>
+                            {session.difficulty}
                           </span>
                         </h1>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.04em' }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><Users size={12} /> {session.participant ? '2/2' : '1/2'}</span>
-                          {session.visibility === 'private' && <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><AlertCircle size={12} /> PRIVATE</span>}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 13, color: 'var(--text-muted)' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Users size={14} /> {session.participant ? '2/2' : '1/2'} participants</span>
+                          {session.visibility === 'private' && <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><AlertCircle size={14} /> Private Session</span>}
                         </div>
                       </div>
                       {isHost && (
                         <button className="btn btn-sm btn-danger" onClick={handleEndSession} disabled={endSessionMutation.isPending}>
-                          {endSessionMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={13} />} End
+                          {endSessionMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <LogOut size={14} />} End
                         </button>
                       )}
                     </div>
 
                     {isHost && session.visibility === 'private' && (
-                      <div style={{
-                        background: 'rgba(124,91,240,0.06)', border: '1px solid rgba(124,91,240,0.15)',
-                        padding: '12px 16px', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                      }}>
+                      <div style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', padding: '10px 14px', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div>
-                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: 'var(--accent-violet-light)', fontWeight: 600, marginBottom: 3, letterSpacing: '0.06em' }}>INVITE CODE</div>
-                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: 'white', letterSpacing: 2 }}>{session.joinCode}</div>
+                          <div style={{ fontSize: 12, color: 'var(--accent-indigo)', fontWeight: 600, marginBottom: 2 }}>Invite Participant</div>
+                          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Code: <strong style={{ letterSpacing: 1, color: 'var(--text-primary)' }}>{session.joinCode}</strong></div>
                         </div>
                         <button className="btn btn-sm btn-ghost" onClick={() => {
                           navigator.clipboard.writeText(`${window.location.origin}/session/${id}?code=${session.joinCode}`);
                           toast.success("Link copied!");
-                        }}><Copy size={13} /> Copy</button>
+                        }}>Copy Link</button>
                       </div>
                     )}
                   </div>
 
+                  {/* Problem Content */}
                   <div style={{ flex: 1, overflowY: 'auto', padding: 24, paddingBottom: 60 }}>
                     {!problem ? (
                       <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 40 }}>Loading problem...</div>
                     ) : (
                       <>
-                        <div style={{ fontSize: 14, lineHeight: 1.8, color: 'var(--text-secondary)', marginBottom: 32, whiteSpace: 'pre-wrap' }}>
+                        <div style={{ fontSize: 15, lineHeight: 1.7, color: 'var(--text-primary)', marginBottom: 32, whiteSpace: 'pre-wrap' }}>
                           {problem.description?.text}
                         </div>
+
                         {problem.examples?.map((ex, i) => (
                           <div key={i} style={{ marginBottom: 24 }}>
-                            <h3 style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 600, marginBottom: 10, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>EXAMPLE {i + 1}</h3>
-                            <div className="code-block" style={{ borderLeft: '3px solid var(--accent-violet)', borderRadius: '0 12px 12px 0' }}>
-                              <div style={{ marginBottom: 4 }}><strong style={{ color: 'var(--text-muted)' }}>Input:</strong> {ex.input}</div>
-                              <div style={{ marginBottom: ex.explanation ? 4 : 0 }}><strong style={{ color: 'var(--text-muted)' }}>Output:</strong> {ex.output}</div>
-                              {ex.explanation && <div><strong style={{ color: 'var(--text-muted)' }}>Explanation:</strong> {ex.explanation}</div>}
+                            <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--text-primary)' }}>Example {i + 1}:</h3>
+                            <div className="code-block" style={{ borderLeft: '3px solid var(--accent-indigo)', borderRadius: '0 8px 8px 0' }}>
+                              <div style={{ marginBottom: 4 }}><strong style={{ color: 'var(--text-secondary)' }}>Input:</strong> {ex.input}</div>
+                              <div style={{ marginBottom: ex.explanation ? 4 : 0 }}><strong style={{ color: 'var(--text-secondary)' }}>Output:</strong> {ex.output}</div>
+                              {ex.explanation && <div><strong style={{ color: 'var(--text-secondary)' }}>Explanation:</strong> {ex.explanation}</div>}
                             </div>
                           </div>
                         ))}
+
                         {problem.constraints?.length > 0 && (
                           <div>
-                            <h3 style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 600, marginBottom: 10, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>CONSTRAINTS</h3>
-                            <ul style={{ paddingLeft: 20, color: 'var(--text-secondary)', fontSize: 13, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 8, color: 'var(--text-primary)' }}>Constraints:</h3>
+                            <ul style={{ paddingLeft: 20, color: 'var(--text-secondary)', fontSize: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
                               {problem.constraints.map((c, i) => (
-                                <li key={i}><code style={{ fontFamily: "'JetBrains Mono', monospace", background: 'rgba(255,255,255,0.04)', padding: '2px 8px', borderRadius: 6, fontSize: 12 }}>{c}</code></li>
+                                <li key={i}><code style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: 4, fontFamily: 'monospace' }}>{c}</code></li>
                               ))}
                             </ul>
                           </div>
@@ -243,33 +290,45 @@ function SessionPage() {
               {/* CODE EDITOR & OUTPUT */}
               <Panel defaultSize={60} minSize={30}>
                 <PanelGroup direction="vertical">
+                  
+                  {/* Editor */}
                   <Panel defaultSize={65} minSize={20}>
-                    <CodeEditorPanel selectedLanguage={selectedLanguage} code={code}
-                      onLanguageChange={handleLanguageChange} onCodeChange={handleCodeChange} remoteTyping={remoteTyping} />
+                    <CodeEditorPanel
+                      selectedLanguage={selectedLanguage}
+                      code={code}
+                      onLanguageChange={handleLanguageChange}
+                      onCodeChange={handleCodeChange}
+                      remoteTyping={remoteTyping}
+                    />
                   </Panel>
+
                   <PanelResizeHandle className="panel-handle-h" />
+
+                  {/* Output Panel Container */}
                   <Panel defaultSize={35} minSize={15}>
-                    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'rgba(255,255,255,0.02)' }}>
-                      <div style={{
-                        padding: '10px 20px', background: '#0a0a0a',
-                        borderBottom: '1px solid rgba(255,255,255,0.06)',
-                        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                      }}>
-                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <Code2 size={14} color="var(--accent-violet)" /> OUTPUT
+                    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-card)' }}>
+                      {/* Actions Bar */}
+                      <div style={{ padding: '8px 16px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--bg-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <Code2 size={15} color="var(--accent-indigo)" /> Execution Results
                         </div>
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button className="btn btn-sm btn-secondary" onClick={handleRunCode} disabled={isRunning || isSubmitting}>
-                            {isRunning ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />} Run
+                            {isRunning ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />} Run
                           </button>
                           <button className="btn btn-sm btn-primary" onClick={handleSubmitCode} disabled={isRunning || isSubmitting}>
-                            {isSubmitting ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />} Submit
+                            {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Submit
                           </button>
                         </div>
                       </div>
-                      <div style={{ flex: 1, overflow: 'hidden' }}><OutputPanel output={output} /></div>
+                      
+                      {/* Output Content */}
+                      <div style={{ flex: 1, overflow: 'hidden' }}>
+                        <OutputPanel output={output} />
+                      </div>
                     </div>
                   </Panel>
+
                 </PanelGroup>
               </Panel>
             </PanelGroup>
@@ -279,18 +338,18 @@ function SessionPage() {
 
           {/* RIGHT: VIDEO & CHAT */}
           <Panel defaultSize={30} minSize={20}>
-            <div style={{ height: '100%', background: '#0a0a0a', position: 'relative' }}>
+            <div style={{ height: '100%', background: 'var(--bg-secondary)', position: 'relative' }}>
               {isInitializingCall ? (
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-                  <Loader2 size={28} className="animate-spin" color="var(--accent-violet)" />
-                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.06em' }}>CONNECTING VIDEO...</p>
+                  <Loader2 size={32} className="animate-spin text-primary" />
+                  <p style={{ color: 'var(--text-muted)' }}>Connecting to video...</p>
                 </div>
               ) : !streamClient || !call ? (
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-                  <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <AlertCircle size={24} color="var(--accent-red)" />
+                  <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <AlertCircle size={32} color="var(--accent-red)" />
                   </div>
-                  <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Video call unavailable</p>
+                  <p style={{ color: 'var(--text-muted)' }}>Video call unavailable</p>
                 </div>
               ) : (
                 <StreamVideo client={streamClient}>

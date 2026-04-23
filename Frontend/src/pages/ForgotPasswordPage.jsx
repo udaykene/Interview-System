@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Code2, ArrowRight, Mail } from "lucide-react";
+import { Code2, Mail, ArrowLeft } from "lucide-react";
 import axiosInstance from "../lib/axios";
 import toast from "react-hot-toast";
 
@@ -17,67 +16,71 @@ function ForgotPasswordPage() {
     try {
       await axiosInstance.post("/auth/forgot-password", { email });
       setSent(true);
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Something went wrong");
+    } catch {
+      toast.error("Something went wrong");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="mesh-gradient" style={{ minHeight: "100vh", background: "#050505", display: "flex", flexDirection: "column", color: "#e8eaed", fontFamily: "'Geist', sans-serif" }}>
-      <nav style={{ height: 64, display: "flex", alignItems: "center", padding: "0 clamp(20px, 4vw, 48px)" }}>
-        <Link to="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
-          <div style={{ width: 28, height: 28, background: 'var(--gradient-brand)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 12px rgba(124,91,240,0.2)' }}>
-            <Code2 size={13} color="white" />
-          </div>
-          <span style={{ fontWeight: 700, fontSize: 17, color: "white", letterSpacing: "-0.02em" }}>CodeArena</span>
-        </Link>
-      </nav>
-
-      <div style={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center", padding: "0 20px" }}>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          style={{
-            width: "100%", maxWidth: 420, background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(255,255,255,0.06)", borderRadius: 20, padding: "40px 36px",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.4)"
+    <div className="min-h-screen animated-bg flex items-center justify-center p-6">
+      <div className="w-full animate-fade-in" style={{ maxWidth: 400 }}>
+        <div style={{ textAlign: 'center', marginBottom: 28 }}>
+          <div style={{
+            width: 44, height: 44, background: 'var(--gradient-brand)',
+            borderRadius: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12
           }}>
+            <Code2 size={22} color="white" />
+          </div>
+        </div>
+
+        <div style={{
+          background: 'var(--bg-card)', border: '1px solid var(--bg-border)',
+          borderRadius: 20, padding: 32
+        }}>
           {sent ? (
-            <div style={{ textAlign: "center" }}>
-              <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(124,91,240,0.08)', border: '1px solid rgba(124,91,240,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-                <Mail size={24} color="#9b7bff" />
+            <div style={{ textAlign: 'center' }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: '50%',
+                background: 'rgba(99,102,241,0.1)', border: '2px solid rgba(99,102,241,0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px'
+              }}>
+                <Mail size={24} color="var(--accent-indigo)" />
               </div>
-              <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 12, letterSpacing: '-0.02em' }}>Check your email</h2>
-              <p style={{ color: 'var(--text-muted)', marginBottom: 24, lineHeight: 1.7, fontSize: 14 }}>
-                If an account exists for <strong style={{ color: 'white' }}>{email}</strong>, we've sent a reset link.
+              <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 10 }}>Check your inbox</h2>
+              <p style={{ color: 'var(--text-muted)', marginBottom: 24, lineHeight: 1.7 }}>
+                We sent a password reset link to <strong style={{ color: 'var(--text-primary)' }}>{email}</strong>
               </p>
-              <Link to="/login" className="btn btn-primary" style={{ borderRadius: 12 }}>Back to Login</Link>
+              <Link to="/login" className="btn btn-primary btn-full">Back to Login</Link>
             </div>
           ) : (
             <>
-              <div style={{ textAlign: "center", marginBottom: 32 }}>
-                <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 8, letterSpacing: '-0.025em' }}>Reset your password</h1>
-                <p style={{ fontSize: 14, color: "var(--text-muted)" }}>Enter your email and we'll send you a reset link</p>
-              </div>
-              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Forgot your password?</h2>
+              <p style={{ color: 'var(--text-muted)', marginBottom: 24, fontSize: 14 }}>
+                Enter your email and we'll send you a reset link.
+              </p>
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div className="input-group">
                   <label className="input-label">Email</label>
-                  <input className="input" type="email" placeholder="you@example.com"
-                    value={email} onChange={e => setEmail(e.target.value)} autoComplete="email" />
+                  <input type="email" className="input" placeholder="you@example.com"
+                    value={email} onChange={e => setEmail(e.target.value)} />
                 </div>
-                <button type="submit" disabled={loading} className="btn btn-primary btn-full" style={{ padding: '13px', borderRadius: 12, marginTop: 4 }}>
-                  {loading ? <div className="spinner" style={{ width: 16, height: 16 }} /> : <>Send Reset Link <ArrowRight size={14} /></>}
+                <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
+                  {loading ? <><div className="spinner" />Sending...</> : "Send Reset Link"}
                 </button>
               </form>
-              <div style={{ marginTop: 24, textAlign: 'center' }}>
-                <Link to="/login" style={{ fontSize: 13, color: 'var(--text-muted)', textDecoration: 'none' }}>
-                  Remember your password? <span style={{ color: 'var(--accent-violet-light)' }}>Sign in</span>
+              <div style={{ textAlign: 'center', marginTop: 20 }}>
+                <Link to="/login" style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  color: 'var(--text-muted)', textDecoration: 'none', fontSize: 14
+                }}>
+                  <ArrowLeft size={14} /> Back to login
                 </Link>
               </div>
             </>
           )}
-        </motion.div>
+        </div>
       </div>
     </div>
   );

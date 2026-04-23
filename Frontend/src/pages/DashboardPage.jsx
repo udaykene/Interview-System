@@ -2,20 +2,14 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { useActiveSessions, useCreateSession, useMyRecentSessions } from "../hooks/useSessions";
 import { useAuth } from "../context/AuthContextState";
+import { useProblems } from "../hooks/useProblems";
 import Navbar from "../components/Navbar";
 import CreateSessionModal from "../components/CreateSessionModal";
-import { motion } from "framer-motion";
 import {
   Plus, Hash, Zap, Users, Clock, ChevronRight,
-  BookOpen, Code2, Activity, Loader2, ArrowRight, Sparkles
+  BookOpen, Code2, Activity, Loader2
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-
-const fadeUp = (delay = 0) => ({
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { delay, duration: 0.6, ease: [0.16, 1, 0.3, 1] }
-});
 
 function DashboardPage() {
   const navigate = useNavigate();
@@ -45,144 +39,139 @@ function DashboardPage() {
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   return (
-    <div style={{ minHeight: '100vh', background: '#050505' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
       <Navbar />
 
-      {/* ─── Hero Header ─────────────────────────────────────── */}
-      <div className="mesh-gradient" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '48px 0 40px' }}>
-        <div className="page-container" style={{ padding: '0 clamp(20px, 4vw, 48px)' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 24 }}>
-            <motion.div {...fadeUp(0)}>
-              <span className="mono-label" style={{ marginBottom: 10, display: 'block' }}>{greeting} 👋</span>
-              <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 8, letterSpacing: '-0.03em', color: 'white' }}>
+      {/* Hero */}
+      <div style={{
+        background: 'linear-gradient(135deg, #0f1225 0%, #0d0f1a 100%)',
+        borderBottom: '1px solid var(--bg-border)',
+        padding: '36px 24px'
+      }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
+            <div>
+              <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 6 }}>{greeting} 👋</p>
+              <h1 style={{ fontSize: 30, fontWeight: 800, marginBottom: 8 }}>
                 {user?.name?.split(' ')[0] || 'Coder'}
               </h1>
               <p style={{ color: 'var(--text-muted)', fontSize: 15 }}>
                 Ready to crush some interviews today?
               </p>
-            </motion.div>
-            <motion.div {...fadeUp(0.15)} style={{ display: 'flex', gap: 10 }}>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
               <button className="btn btn-secondary" onClick={() => navigate("/problems")}>
-                <BookOpen size={15} />Practice Solo
+                <BookOpen size={16} />Practice Solo
               </button>
               <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
-                <Plus size={15} />New Session
+                <Plus size={16} />New Session
               </button>
-            </motion.div>
+            </div>
           </div>
 
-          {/* Stats Row */}
-          <motion.div {...fadeUp(0.2)} style={{ display: 'flex', gap: 16, marginTop: 32, flexWrap: 'wrap' }}>
+          {/* Stats row */}
+          <div style={{ display: 'flex', gap: 16, marginTop: 28, flexWrap: 'wrap' }}>
             {[
-              { label: 'ACTIVE', value: activeSessions.length, icon: <Activity size={14} />, color: '#10b981' },
-              { label: 'PAST', value: recentSessions.length, icon: <Clock size={14} />, color: '#818cf8' },
-              { label: 'SOLVED', value: user?.stats?.problemsSolved || 0, icon: <Code2 size={14} />, color: '#f59e0b' },
+              { label: 'Active Sessions', value: activeSessions.length, icon: <Activity size={15} />, color: '#10b981' },
+              { label: 'Past Sessions', value: recentSessions.length, icon: <Clock size={15} />, color: '#6366f1' },
+              { label: 'Problems Solved', value: user?.stats?.problemsSolved || 0, icon: <Code2 size={15} />, color: '#f59e0b' },
             ].map((stat, i) => (
-              <div key={i} className="hover-glow" style={{
-                display: 'flex', alignItems: 'center', gap: 14,
-                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
-                borderRadius: 14, padding: '14px 20px',
-                transition: 'all 0.25s'
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                background: 'rgba(255,255,255,0.04)', border: '1px solid var(--bg-border)',
+                borderRadius: 10, padding: '10px 16px'
               }}>
                 <div style={{
-                  width: 36, height: 36, borderRadius: 10,
-                  background: `${stat.color}12`, border: `1px solid ${stat.color}25`,
+                  width: 32, height: 32, borderRadius: 8, background: `${stat.color}18`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', color: stat.color
                 }}>{stat.icon}</div>
                 <div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: 'white', letterSpacing: '-0.02em' }}>{stat.value}</div>
-                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.08em' }}>{stat.label}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700 }}>{stat.value}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{stat.label}</div>
                 </div>
               </div>
             ))}
-          </motion.div>
+          </div>
         </div>
       </div>
 
-      {/* ─── Main Content ────────────────────────────────────── */}
-      <div className="page-container">
-        
-        {/* Join by Code */}
-        <motion.div {...fadeUp(0.25)} className="card" style={{ marginBottom: 32 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-            <Hash size={16} color="var(--accent-violet-light)" />
-            <h2 style={{ fontWeight: 700, fontSize: 16, letterSpacing: '-0.01em' }}>Join with Code</h2>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 24px' }}>
+        {/* Join by code */}
+        <div className="card" style={{ marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <Hash size={18} color="var(--accent-indigo)" />
+            <h2 style={{ fontWeight: 700, fontSize: 16 }}>Join with Code</h2>
           </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <input className="input" style={{
-              maxWidth: 220, letterSpacing: 4,
-              fontFamily: "'JetBrains Mono', monospace",
-              textTransform: 'uppercase', textAlign: 'center'
-            }}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <input className="input" style={{ maxWidth: 240, letterSpacing: 3, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase' }}
               placeholder="XXXXXX"
               value={joinCode}
               onChange={e => setJoinCode(e.target.value.replace(/\s/g, '').toUpperCase())}
               maxLength={6}
             />
-            <button className="btn btn-violet" disabled={!joinCode}
+            <button className="btn btn-primary" disabled={!joinCode}
               onClick={() => { if (joinCode) navigate(`/session/join/${joinCode}`); }}>
-              Join <ArrowRight size={14} />
+              Join Session
             </button>
           </div>
-          <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'var(--text-muted)', marginTop: 10, letterSpacing: '0.02em' }}>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
             Paste the 6-character code shared by the host.
           </p>
-        </motion.div>
+        </div>
 
         {/* Active Sessions */}
-        <motion.div {...fadeUp(0.3)} style={{ marginBottom: 32 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px rgba(16,185,129,0.5)' }} />
-            <h2 style={{ fontWeight: 700, fontSize: 18, letterSpacing: '-0.01em' }}>Active Sessions</h2>
-            <span className="badge badge-purple" style={{ marginLeft: 'auto' }}>{activeSessions.length} LIVE</span>
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px rgba(16,185,129,0.5)' }} />
+            <h2 style={{ fontWeight: 700, fontSize: 18 }}>Active Sessions</h2>
+            <span className="badge badge-purple" style={{ marginLeft: 'auto', fontSize: 12 }}>{activeSessions.length} live</span>
           </div>
 
           {loadingActive ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
-              <Loader2 size={24} className="animate-spin" color="var(--accent-violet)" />
+            <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+              <Loader2 size={28} className="animate-spin" color="var(--accent-indigo)" />
             </div>
           ) : activeSessions.length === 0 ? (
-            <div className="card" style={{ textAlign: 'center', padding: '48px 24px' }}>
-              <Users size={36} color="var(--text-muted)" style={{ margin: '0 auto 16px', opacity: 0.5 }} />
-              <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 20 }}>No active sessions right now</p>
-              <button className="btn btn-violet" onClick={() => setShowCreateModal(true)}>
-                <Sparkles size={14} />Create one
+            <div className="card" style={{ textAlign: 'center', padding: '40px 20px' }}>
+              <Users size={40} color="var(--text-muted)" style={{ margin: '0 auto 12px' }} />
+              <p style={{ color: 'var(--text-muted)', fontSize: 15 }}>No active sessions right now</p>
+              <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => setShowCreateModal(true)}>
+                <Plus size={15} />Create one!
               </button>
             </div>
           ) : (
-            <div className="bento-grid">
-              {activeSessions.map((session, i) => (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+              {activeSessions.map(session => (
                 <SessionCard
                   key={session._id} session={session}
                   isOwn={isUserInSession(session)}
                   onJoin={() => navigate(`/session/${session._id}`)}
-                  index={i}
                 />
               ))}
             </div>
           )}
-        </motion.div>
+        </div>
 
         {/* Recent Sessions */}
-        <motion.div {...fadeUp(0.35)}>
-          <h2 style={{ fontWeight: 700, fontSize: 18, marginBottom: 20, letterSpacing: '-0.01em' }}>Recent Sessions</h2>
+        <div>
+          <h2 style={{ fontWeight: 700, fontSize: 18, marginBottom: 16 }}>Recent Sessions</h2>
           {loadingRecent ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
-              <Loader2 size={24} className="animate-spin" color="var(--accent-violet)" />
+            <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+              <Loader2 size={28} className="animate-spin" color="var(--accent-indigo)" />
             </div>
           ) : recentSessions.length === 0 ? (
-            <div className="card" style={{ textAlign: 'center', padding: '40px 24px' }}>
-              <Clock size={32} color="var(--text-muted)" style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+            <div className="card" style={{ textAlign: 'center', padding: '32px 20px' }}>
+              <Clock size={36} color="var(--text-muted)" style={{ margin: '0 auto 12px' }} />
               <p style={{ color: 'var(--text-muted)' }}>No completed sessions yet</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {recentSessions.map((session, i) => (
-                <RecentSessionRow key={session._id} session={session} index={i} />
+              {recentSessions.map(session => (
+                <RecentSessionRow key={session._id} session={session} />
               ))}
             </div>
           )}
-        </motion.div>
+        </div>
       </div>
 
       <CreateSessionModal
@@ -201,78 +190,57 @@ function DiffBadge({ difficulty }) {
   const cl = difficulty?.toLowerCase();
   return (
     <span className={`badge badge-${cl === 'easy' ? 'easy' : cl === 'medium' ? 'medium' : 'hard'}`}>
-      {difficulty?.toUpperCase()}
+      {difficulty}
     </span>
   );
 }
 
-/* ─── Dashboard Card (Key Deliverable) ────────────────────── */
-function SessionCard({ session, isOwn, onJoin, index }) {
+function SessionCard({ session, isOwn, onJoin }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.08, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="card-glow hover-lift"
-      style={{ cursor: 'pointer', padding: 24 }}
-      onClick={onJoin}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+    <div className="card" style={{ cursor: 'pointer' }} onClick={onJoin}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h3 style={{ fontWeight: 600, fontSize: 15, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>
+          <h3 style={{ fontWeight: 600, fontSize: 15, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {session.problem}
           </h3>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <DiffBadge difficulty={session.difficulty?.charAt(0).toUpperCase() + session.difficulty?.slice(1)} />
-            {isOwn && <span className="badge badge-purple">YOURS</span>}
+            {isOwn && <span className="badge badge-purple" style={{ fontSize: 11 }}>Yours</span>}
           </div>
         </div>
-        <button className="btn btn-sm btn-violet" style={{ flexShrink: 0, marginLeft: 12 }}
-          onClick={e => { e.stopPropagation(); onJoin(); }}>
-          <Zap size={12} />Join
+        <button className="btn btn-sm btn-primary" style={{ flexShrink: 0, marginLeft: 10 }} onClick={e => { e.stopPropagation(); onJoin(); }}>
+          <Zap size={13} />Join
         </button>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--text-muted)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-muted)' }}>
         {session.host?.profileImage ? (
-          <img src={session.host.profileImage} style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.08)' }} />
+          <img src={session.host.profileImage} style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover' }} />
         ) : (
-          <div style={{
-            width: 22, height: 22, borderRadius: '50%', background: 'var(--gradient-brand)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 9, color: 'white', fontWeight: 700
-          }}>
+          <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--gradient-brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: 'white', fontWeight: 700 }}>
             {session.host?.name?.[0]}
           </div>
         )}
-        <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{session.host?.name}</span>
-        <span style={{ marginLeft: 'auto', fontFamily: "'JetBrains Mono', monospace", fontSize: 11, letterSpacing: '0.04em' }}>
-          {session.participant ? <><Users size={11} /> 2/2</> : <><Users size={11} /> 1/2</>}
+        <span>{session.host?.name}</span>
+        <span style={{ marginLeft: 'auto' }}>
+          {session.participant ? <><Users size={12} /> 2/2</> : <><Users size={12} /> 1/2</>}
         </span>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-function RecentSessionRow({ session, index }) {
+function RecentSessionRow({ session }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -12 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-      className="card hover-glow"
-      style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 24px' }}
-    >
+    <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 20px' }}>
       <DiffBadge difficulty={session.difficulty?.charAt(0).toUpperCase() + session.difficulty?.slice(1)} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>{session.problem}</div>
-        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'var(--text-muted)', marginTop: 3, letterSpacing: '0.02em' }}>
+        <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.problem}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
           {session.createdAt && formatDistanceToNow(new Date(session.createdAt), { addSuffix: true })}
         </div>
       </div>
-      <span className="badge" style={{ background: 'rgba(255,255,255,0.04)', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.06)' }}>
-        COMPLETED
-      </span>
-    </motion.div>
+      <span className="badge" style={{ background: 'rgba(100,116,139,0.1)', color: 'var(--text-muted)', fontSize: 11 }}>Completed</span>
+    </div>
   );
 }
 

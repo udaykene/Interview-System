@@ -1,36 +1,34 @@
-import { motion } from "framer-motion";
-import { Users, Trophy } from "lucide-react";
+import { TrophyIcon, UsersIcon } from "lucide-react";
 
 function StatsCards({ activeSessionsCount, recentSessionsCount }) {
-  const stats = [
-    { label: "ACTIVE", value: activeSessionsCount, icon: <Users size={18} />, color: '#10b981' },
-    { label: "TOTAL", value: recentSessionsCount, icon: <Trophy size={18} />, color: '#818cf8' },
-  ];
-
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-      {stats.map((s, i) => (
-        <motion.div
-          key={s.label}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: i * 0.08, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="card hover-glow"
-          style={{ textAlign: 'center', padding: 28 }}
-        >
-          <div style={{
-            width: 44, height: 44, borderRadius: 12, margin: '0 auto 14px',
-            background: `${s.color}10`, border: `1px solid ${s.color}20`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color
-          }}>
-            {s.icon}
+    <div className="lg:col-span-1 grid grid-cols-1 gap-6">
+      {/* Active Count */}
+      <div className="card bg-base-100 border-2 border-primary/20 hover:border-primary/40">
+        <div className="card-body">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-primary/10 rounded-2xl">
+              <UsersIcon className="w-7 h-7 text-primary" />
+            </div>
+            <div className="badge badge-primary">Live</div>
           </div>
-          <div style={{ fontSize: 32, fontWeight: 800, color: 'white', marginBottom: 4, letterSpacing: '-0.02em' }}>
-            {s.value}
+          <div className="text-4xl font-black mb-1">{activeSessionsCount}</div>
+          <div className="text-sm opacity-60">Active Sessions</div>
+        </div>
+      </div>
+
+      {/* Recent Count */}
+      <div className="card bg-base-100 border-2 border-secondary/20 hover:border-secondary/40">
+        <div className="card-body">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-3 bg-secondary/10 rounded-2xl">
+              <TrophyIcon className="w-7 h-7 text-secondary" />
+            </div>
           </div>
-          <div className="mono-label">{s.label}</div>
-        </motion.div>
-      ))}
+          <div className="text-4xl font-black mb-1">{recentSessionsCount}</div>
+          <div className="text-sm opacity-60">Total Sessions</div>
+        </div>
+      </div>
     </div>
   );
 }

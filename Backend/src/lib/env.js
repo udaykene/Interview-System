@@ -1,15 +1,5 @@
 import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load Backend/.env reliably no matter where the Node process was started from.
-dotenv.config({
-  path: path.resolve(__dirname, "../../.env"),
-  quiet: true,
-});
+dotenv.config({ quiet: true }); //Stop the .env warning in the terminal
 
 export const ENV = {
   PORT: process.env.PORT,
