@@ -1,39 +1,20 @@
-import { ArrowRightIcon, SparklesIcon, ZapIcon } from "lucide-react";
-import { useAuth } from "../context/AuthContextState";
+import { motion } from "framer-motion";
 
-function WelcomeSection({ onCreateSession }) {
-  const { user } = useAuth();
+function WelcomeSection({ userName }) {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   return (
-    <div className="relative overflow-hidden">
-      <div className="relative max-w-7xl mx-auto px-6 py-16">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                <SparklesIcon className="w-6 h-6 text-white" />
-              </div>
-              <h1 className="text-5xl font-black bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-                Welcome back, {user?.name || "there"}!
-              </h1>
-            </div>
-            <p className="text-xl text-base-content/60 ml-16">
-              Ready to level up your coding skills?
-            </p>
-          </div>
-          <button
-            onClick={onCreateSession}
-            className="group px-8 py-4 bg-gradient-to-r from-primary to-secondary rounded-2xl transition-all duration-200 hover:opacity-90"
-          >
-            <div className="flex items-center gap-3 text-white font-bold text-lg">
-              <ZapIcon className="w-6 h-6" />
-              <span>Create Session</span>
-              <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </div>
-          </button>
-        </div>
-      </div>
-    </div>
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <span className="mono-label" style={{ marginBottom: 8, display: 'block' }}>{greeting} 👋</span>
+      <h1 style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.03em', color: 'white' }}>
+        {userName || 'Coder'}
+      </h1>
+    </motion.div>
   );
 }
 
