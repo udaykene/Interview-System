@@ -1,15 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContextState";
-
-const rawApiUrl = (import.meta.env.VITE_API_URL || "").trim();
-const normalizedApiUrl = (() => {
-  if (!rawApiUrl) return "/api";
-  const withoutTrailingSlash = rawApiUrl.replace(/\/+$/, "");
-  return /\/api$/i.test(withoutTrailingSlash)
-    ? withoutTrailingSlash
-    : `${withoutTrailingSlash}/api`;
-})();
-const authUrl = `${normalizedApiUrl}/auth`;
+import { motion } from "framer-motion";
+import { ArrowRight, Terminal, Zap, Users, Code2, Shield } from "lucide-react";
 
 const codeSnippet = `function twoSum(nums, target) {
   const map = new Map();
@@ -20,129 +12,363 @@ const codeSnippet = `function twoSum(nums, target) {
   }
 }`;
 
+const fadeUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: (i = 0) => ({
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.12, duration: 0.7, ease: [0.16, 1, 0.3, 1] }
+  })
+};
+
+const scaleIn = {
+  hidden: { opacity: 0, scale: 0.92 },
+  visible: {
+    opacity: 1, scale: 1,
+    transition: { delay: 0.4, duration: 0.8, ease: [0.16, 1, 0.3, 1] }
+  }
+};
+
+const features = [
+  {
+    icon: <Terminal size={20} />,
+    title: "Real-time Code Editor",
+    desc: "Monaco-powered editor with syntax highlighting, autocomplete, and multi-language support.",
+    mono: "MONACO"
+  },
+  {
+    icon: <Users size={20} />,
+    title: "Live Collaboration",
+    desc: "Pair-program in real-time with video, audio, and synchronized code editing.",
+    mono: "P2P"
+  },
+  {
+    icon: <Zap size={20} />,
+    title: "Instant Execution",
+    desc: "Run code against test cases instantly. Get immediate feedback on correctness and performance.",
+    mono: "PISTON"
+  },
+  {
+    icon: <Shield size={20} />,
+    title: "Curated Problems",
+    desc: "Hand-picked interview problems organized by difficulty, topic, and company tags.",
+    mono: "DSA"
+  },
+];
+
 const HomePage = () => {
   const { isSignedIn } = useAuth();
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0a0a0a", overflowX: "hidden", color: "#ffffff", fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#050505", overflowX: "hidden", color: "#e8eaed", fontFamily: "'Geist', sans-serif" }}>
       
       {/* ─── NAVBAR ─────────────────────────────────────────── */}
       <nav style={{
-        height: "100px",
-        background: "#0a0a0a",
-        borderBottom: "1px solid #ffffffff",
+        height: 72,
+        background: "rgba(5,5,5,0.8)",
+        backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)",
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
         position: "sticky",
         top: 0,
         zIndex: 100,
         display: "flex",
         alignItems: "center",
-        // padding: "0 24px"
+        padding: "0 clamp(20px, 4vw, 48px)",
       }}>
-        {/* Logo */}
-        <div className="pl-6" style={{ display: "flex",paddingLeft:"24px", alignItems: "center", gap: 10, flexShrink: 0 }}>
-          <svg width="38" height="38" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="2" y="4" width="6" height="6" rx="2" fill="white"/>
-            <rect x="10" y="4" width="6" height="6" rx="2" fill="white"/>
-            <rect x="2" y="12" width="6" height="6" rx="2" fill="white"/>
-            <rect x="10" y="12" width="6" height="6" rx="2" fill="white"/>
-          </svg>
-          <span style={{ fontWeight: 600, fontSize: 28, color: "white" }}>
-            CodeInterview
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+          <div style={{
+            width: 30, height: 30, background: 'var(--gradient-brand)',
+            borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 16px rgba(124,91,240,0.25)'
+          }}>
+            <Code2 size={14} color="white" />
+          </div>
+          <span style={{ fontWeight: 700, fontSize: 18, color: "white", letterSpacing: "-0.02em" }}>
+            CodeArena
           </span>
         </div>
 
         <div style={{ flex: 1 }} />
 
-        {/* Auth Buttons */}
-        <div className="h-[100px] w-[200px]" style={{ display: "flex", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           {isSignedIn ? (
-            <Link className="bg-white text-black h-full w-full flex justify-center items-center text-2xl " to="/dashboard">
-              Dashboard
+            <Link to="/dashboard" className="btn btn-primary" style={{ padding: "9px 22px", fontSize: 13 }}>
+              Dashboard <ArrowRight size={14} />
             </Link>
           ) : (
             <>
-              <Link to="/login" style={{ color: "#a0a0a0", textDecoration: "none", fontSize: 14, fontWeight: 500 }}>
+              <Link to="/login" style={{
+                color: "var(--text-secondary)", textDecoration: "none", fontSize: 14, fontWeight: 500,
+                transition: "color 0.2s"
+              }}
+                onMouseEnter={e => e.currentTarget.style.color = '#e8eaed'}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+              >
                 Sign in
               </Link>
-              <Link to="/signup" style={{
-                background: "white", color: "black", fontWeight: 500, padding: "8px 16px", borderRadius: 4, textDecoration: "none", fontSize: 14
-              }}>
-                Get Started
+              <Link to="/signup" className="btn btn-primary" style={{ padding: "9px 22px", fontSize: 13 }}>
+                Get Started <ArrowRight size={14} />
               </Link>
             </>
           )}
         </div>
       </nav>
 
-      {/* ─── HERO ────────────────────────────────────────────── */}
-      <div style={{ padding: "100px 24px 80px", maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center" }}>
-        {/* LEFT — Copy */}
-        <div className="animate-fade-in" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          <h1 style={{ fontSize: "56px", fontWeight: 500, lineHeight: 1.1, margin: 0, letterSpacing: "-0.02em" }}>
-            <span style={{ color: "#ffffff" }}>Your fastest path to</span>
-            <br />
-            <span style={{ color: "#ffffff" }}>mastery for</span>
-            <br />
-            <span style={{ color: "transparent", WebkitTextStroke: "1px #ffffff", fontWeight: 500 }}>coding interviews.</span>
-          </h1>
-
-          <p style={{ fontSize: 18, color: "#8a8f98", lineHeight: 1.6, margin: 0, maxWidth: 500, fontWeight: 400 }}>
-            Intuitive collaboration to scale any interview from your first practice run to your dream job.
-          </p>
-
-          <div style={{ display: "flex", gap: 16, marginTop: 12 }}>
-            <Link to={isSignedIn ? "/dashboard" : "/signup"} style={{
-              background: "white", color: "black", fontWeight: 500, padding: "12px 24px", borderRadius: 4, textDecoration: "none", fontSize: 16, display: "inline-flex", alignItems: "center"
-            }}>
-              Get Started for Free
-            </Link>
-          </div>
-        </div>
-
-        {/* RIGHT — Terminal / Editor Graphic */}
-        <div className="animate-slide-up" style={{
-          background: "#121212", border: "1px solid #2a2a2a", borderRadius: 8, padding: 24, paddingBottom: 40, position: "relative"
+      {/* ─── HERO ─────────────────────────────────────────────── */}
+      <div className="mesh-gradient" style={{ position: "relative", overflow: "hidden" }}>
+        <div style={{
+          padding: "clamp(80px, 12vw, 160px) clamp(20px, 4vw, 48px) clamp(60px, 8vw, 100px)",
+          maxWidth: 1300,
+          margin: "0 auto",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "clamp(40px, 6vw, 80px)",
+          alignItems: "center",
         }}>
-          {/* Mock terminal header */}
-          <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
-            <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#333" }} />
-            <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#333" }} />
-            <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#333" }} />
+          {/* LEFT — Copy */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+            <motion.div
+              variants={fadeUp} initial="hidden" animate="visible" custom={0}
+              style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}
+            >
+              <span style={{
+                fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 600,
+                color: "var(--accent-violet-light)", letterSpacing: "0.08em",
+                background: "rgba(124,91,240,0.1)", border: "1px solid rgba(124,91,240,0.2)",
+                borderRadius: 99, padding: "5px 14px"
+              }}>
+                NOW IN BETA
+              </span>
+            </motion.div>
+
+            <motion.h1
+              variants={fadeUp} initial="hidden" animate="visible" custom={1}
+              className="heading-xl"
+            >
+              <span style={{ color: "#ffffff" }}>Your fastest path to</span>
+              <br />
+              <span style={{ color: "#ffffff" }}>mastery for</span>
+              <br />
+              <span className="text-stroke" style={{ fontWeight: 700 }}>coding interviews.</span>
+            </motion.h1>
+
+            <motion.p
+              variants={fadeUp} initial="hidden" animate="visible" custom={2}
+              style={{ fontSize: 17, color: "var(--text-secondary)", lineHeight: 1.7, margin: 0, maxWidth: 480, fontWeight: 400 }}
+            >
+              Intuitive real-time collaboration to scale any interview — from your first practice run to your dream job.
+            </motion.p>
+
+            <motion.div
+              variants={fadeUp} initial="hidden" animate="visible" custom={3}
+              style={{ display: "flex", gap: 14, marginTop: 8 }}
+            >
+              <Link to={isSignedIn ? "/dashboard" : "/signup"} className="btn btn-primary btn-lg">
+                Get Started Free <ArrowRight size={16} />
+              </Link>
+              <Link to={isSignedIn ? "/problems" : "/login"} className="btn btn-secondary btn-lg">
+                Explore Problems
+              </Link>
+            </motion.div>
+
+            <motion.div
+              variants={fadeUp} initial="hidden" animate="visible" custom={4}
+              style={{ display: "flex", gap: 32, marginTop: 16 }}
+            >
+              {[
+                { value: "500+", label: "Problems" },
+                { value: "10k+", label: "Sessions" },
+                { value: "99.9%", label: "Uptime" },
+              ].map(stat => (
+                <div key={stat.label}>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: "white", letterSpacing: "-0.02em" }}>{stat.value}</div>
+                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "var(--text-muted)", letterSpacing: "0.04em", marginTop: 2 }}>
+                    {stat.label.toUpperCase()}
+                  </div>
+                </div>
+              ))}
+            </motion.div>
           </div>
-          
-          <pre style={{
-            margin: 0, color: "#d4d4d4", fontFamily: "'JetBrains Mono', monospace", fontSize: 14, lineHeight: 1.5, overflowX: "auto"
-          }}>
-            <code dangerouslySetInnerHTML={{ __html: codeSnippet.replace(/function|const|let|for|if|return/g, '<span style="color: #c586c0">$&</span>').replace(/twoSum|Map|set|has|get/g, '<span style="color: #dcdcaa">$&</span>') }} />
-          </pre>
-          
-          <div style={{ 
-            position: "absolute", bottom: -20, right: 30, background: "#1e1e1e", border: "1px solid #333", borderRadius: 4, padding: "12px 20px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.5)"
-          }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>
-            </svg>
-            <span style={{ fontFamily: "monospace", color: "#10b981", fontSize: 14 }}>All tests passed.</span>
-          </div>
+
+          {/* RIGHT — Terminal */}
+          <motion.div
+            variants={scaleIn} initial="hidden" animate="visible"
+            style={{
+              background: "rgba(255,255,255,0.02)",
+              border: "1px solid rgba(255,255,255,0.06)",
+              borderRadius: 16,
+              padding: 0,
+              position: "relative",
+              overflow: "hidden",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(124,91,240,0.05)"
+            }}
+          >
+            {/* Terminal header */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "14px 20px",
+              borderBottom: "1px solid rgba(255,255,255,0.06)",
+              background: "rgba(255,255,255,0.02)"
+            }}>
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ff5f57" }} />
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#febc2e" }} />
+              <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#28c840" }} />
+              <span style={{
+                marginLeft: 12, fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 11, color: "var(--text-muted)", letterSpacing: "0.04em"
+              }}>
+                two-sum.js
+              </span>
+            </div>
+            
+            {/* Code content */}
+            <div style={{ padding: "20px 24px 28px" }}>
+              <pre style={{
+                margin: 0, color: "#d4d4d4",
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 13, lineHeight: 1.65, overflowX: "auto"
+              }}>
+                <code dangerouslySetInnerHTML={{
+                  __html: codeSnippet
+                    .replace(/function|const|let|for|if|return/g, '<span style="color: #c792ea">$&</span>')
+                    .replace(/twoSum|Map|set|has|get/g, '<span style="color: #82aaff">$&</span>')
+                    .replace(/\/\/.*/g, '<span style="color: #546e7a">$&</span>')
+                }} />
+              </pre>
+            </div>
+            
+            {/* Result badge */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 1.2, duration: 0.5 }}
+              style={{ 
+                position: "absolute", bottom: -16, right: 28,
+                background: "#0d0d0d",
+                border: "1px solid rgba(16,185,129,0.25)",
+                borderRadius: 10, padding: "10px 18px",
+                display: "flex", alignItems: "center", gap: 10,
+                boxShadow: "0 10px 30px rgba(0,0,0,0.6), 0 0 20px rgba(16,185,129,0.08)"
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "#10b981", fontSize: 12, fontWeight: 600, letterSpacing: "0.02em" }}>
+                ALL TESTS PASSED
+              </span>
+            </motion.div>
+          </motion.div>
         </div>
       </div>
 
-      {/* ─── FOOTER ──────────────────────────────────────────── */}
+      {/* ─── FEATURES BENTO GRID ──────────────────────────────── */}
       <div style={{
-        marginTop: 60,
-        borderTop: "1px solid #1f1f1f",
-        padding: "32px 24px",
-        display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
-        maxWidth: 1200, margin: "60px auto 0"
+        maxWidth: 1300, margin: "0 auto",
+        padding: "clamp(60px, 8vw, 120px) clamp(20px, 4vw, 48px)",
+      }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }} transition={{ duration: 0.6 }}
+          style={{ textAlign: "center", marginBottom: "clamp(40px, 6vw, 72px)" }}
+        >
+          <span className="mono-label" style={{ marginBottom: 16, display: "block" }}>FEATURES</span>
+          <h2 className="heading-lg" style={{ color: "white", marginBottom: 16 }}>
+            Everything you need to <span className="gradient-text">ace the interview</span>
+          </h2>
+          <p style={{ fontSize: 16, color: "var(--text-secondary)", maxWidth: 560, margin: "0 auto", lineHeight: 1.7 }}>
+            A complete platform built for developers who want to master coding interviews with real-time collaboration.
+          </p>
+        </motion.div>
+
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+          gap: 20,
+        }}>
+          {features.map((f, i) => (
+            <motion.div
+              key={f.title}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              className="card-glow"
+              style={{ padding: 32, cursor: "default" }}
+            >
+              <div style={{
+                width: 42, height: 42, borderRadius: 12,
+                background: "rgba(124,91,240,0.08)", border: "1px solid rgba(124,91,240,0.15)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#9b7bff", marginBottom: 20
+              }}>
+                {f.icon}
+              </div>
+              <span className="mono-label" style={{ marginBottom: 8, display: "block" }}>{f.mono}</span>
+              <h3 style={{ fontSize: 18, fontWeight: 600, color: "white", marginBottom: 10, letterSpacing: "-0.01em" }}>
+                {f.title}
+              </h3>
+              <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.7 }}>
+                {f.desc}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* ─── CTA SECTION ──────────────────────────────────────── */}
+      <div style={{
+        maxWidth: 1300, margin: "0 auto",
+        padding: "0 clamp(20px, 4vw, 48px) clamp(80px, 10vw, 140px)",
+      }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }} transition={{ duration: 0.6 }}
+          className="card-glow"
+          style={{
+            padding: "clamp(40px, 6vw, 72px)",
+            textAlign: "center",
+            background: "rgba(124,91,240,0.03)",
+            borderColor: "rgba(124,91,240,0.12)",
+          }}
+        >
+          <span className="mono-label" style={{ marginBottom: 20, display: "block" }}>GET STARTED</span>
+          <h2 className="heading-lg" style={{ color: "white", marginBottom: 16 }}>
+            Ready to level up your interview game?
+          </h2>
+          <p style={{ fontSize: 16, color: "var(--text-secondary)", maxWidth: 480, margin: "0 auto 32px", lineHeight: 1.7 }}>
+            Join thousands of developers preparing for technical interviews with real-time collaboration.
+          </p>
+          <Link to={isSignedIn ? "/dashboard" : "/signup"} className="btn btn-primary btn-lg">
+            Start Practicing Now <ArrowRight size={16} />
+          </Link>
+        </motion.div>
+      </div>
+
+      {/* ─── FOOTER ───────────────────────────────────────────── */}
+      <div style={{
+        borderTop: "1px solid rgba(255,255,255,0.06)",
+        padding: "32px clamp(20px, 4vw, 48px)",
+        maxWidth: 1300, margin: "0 auto",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 14, color: "#a0a0a0", fontWeight: 500 }}>
-            CodeInterview © 2025
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "var(--text-muted)", letterSpacing: "0.04em" }}>
+            © 2025 CODEARENA
           </span>
         </div>
-        <div style={{ display: "flex", gap: 24 }}>
+        <div style={{ display: "flex", gap: 28 }}>
           {["Terms", "Privacy", "Security"].map((l) => (
-             <span key={l} style={{ fontSize: 14, color: "#a0a0a0", cursor: "pointer", fontWeight: 500 }}>{l}</span>
+            <span key={l} style={{
+              fontFamily: "'JetBrains Mono', monospace", fontSize: 12,
+              color: "var(--text-muted)", cursor: "pointer", letterSpacing: "0.04em",
+              transition: "color 0.2s"
+            }}
+              onMouseEnter={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+            >
+              {l}
+            </span>
           ))}
         </div>
       </div>

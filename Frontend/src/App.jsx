@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
@@ -18,16 +19,31 @@ import { Toaster } from "react-hot-toast";
 function App() {
   const { isSignedIn, isLoaded } = useAuth();
 
+  // Spotlight cursor tracker
+  useEffect(() => {
+    const handler = (e) => {
+      document.documentElement.style.setProperty('--mouse-x', `${e.clientX}px`);
+      document.documentElement.style.setProperty('--mouse-y', `${e.clientY}px`);
+    };
+    window.addEventListener('mousemove', handler);
+    return () => window.removeEventListener('mousemove', handler);
+  }, []);
+
   if (!isLoaded) {
     return (
-      <div className="min-h-screen animated-bg flex items-center justify-center">
-        <div className="spinner" style={{ width: 40, height: 40, borderWidth: 3 }} />
+      <div className="spotlight" style={{ minHeight: '100vh', background: '#050505', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <div className="spinner" style={{ width: 36, height: 36, borderWidth: 2 }} />
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.05em' }}>
+            LOADING CODEARENA...
+          </span>
+        </div>
       </div>
     );
   }
 
   return (
-    <>
+    <div className="spotlight">
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<HomePage />} />
@@ -56,14 +72,16 @@ function App() {
         toastOptions={{ 
           duration: 4000,
           style: {
-            background: 'var(--bg-card)',
-            color: 'var(--text-primary)',
-            border: '1px solid var(--bg-border)',
-            boxShadow: 'var(--shadow-lg)'
+            background: '#111111',
+            color: '#e8eaed',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '12px',
+            boxShadow: '0 8px 40px rgba(0,0,0,0.7)',
+            fontFamily: "'Geist', sans-serif",
           }
         }} 
       />
-    </>
+    </div>
   );
 }
 

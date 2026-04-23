@@ -1,103 +1,74 @@
-import { Code2, Clock, Users, Trophy, Loader } from "lucide-react";
-import { getDifficultyBadgeClass } from "../lib/utils";
+import { Code2, Clock, Users, Trophy, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { motion } from "framer-motion";
 
 function RecentSessions({ sessions, isLoading }) {
   return (
-    <div className="card bg-base-100 border-2 border-accent/20 hover:border-accent/30 mt-8">
-      <div className="card-body">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-gradient-to-br from-accent to-secondary rounded-xl">
-            <Clock className="w-5 h-5 text-white" />
-          </div>
-          <h2 className="text-2xl font-black">Your Past Sessions</h2>
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+        <Clock size={16} color="var(--accent-indigo)" />
+        <h2 style={{ fontWeight: 700, fontSize: 18, letterSpacing: '-0.01em' }}>Past Sessions</h2>
+      </div>
+
+      {isLoading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
+          <Loader2 size={24} className="animate-spin" color="var(--accent-violet)" />
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {isLoading ? (
-            <div className="col-span-full flex items-center justify-center py-20">
-              <Loader className="w-10 h-10 animate-spin text-primary" />
-            </div>
-          ) : sessions.length > 0 ? (
-            sessions.map((session) => (
-              <div
-                key={session._id}
-                className={`card relative ${
-                  session.status === "active"
-                    ? "bg-success/10 border-success/30 hover:border-success/60"
-                    : "bg-base-200 border-base-300 hover:border-primary/30"
-                }`}
-              >
-                {session.status === "active" && (
-                  <div className="absolute top-3 right-3">
-                    <div className="badge badge-success gap-1">
-                      <div className="w-1.5 h-1.5 bg-success rounded-full animate-pulse" />
-                      ACTIVE
-                    </div>
-                  </div>
-                )}
-
-                <div className="card-body p-5">
-                  <div className="flex items-start gap-3 mb-4">
-                    <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        session.status === "active"
-                          ? "bg-gradient-to-br from-success to-success/70"
-                          : "bg-gradient-to-br from-primary to-secondary"
-                      }`}
-                    >
-                      <Code2 className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-base mb-1 truncate">{session.problem}</h3>
-                      <span
-                        className={`badge badge-sm ${getDifficultyBadgeClass(session.difficulty)}`}
-                      >
-                        {session.difficulty}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 text-sm opacity-80 mb-4">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      <span>
-                        {formatDistanceToNow(new Date(session.createdAt), {
-                          addSuffix: true,
-                        })}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4" />
-                      <span>
-                        {session.participant ? "2" : "1"} participant
-                        {session.participant ? "s" : ""}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-3 border-t border-base-300">
-                    <span className="text-xs font-semibold opacity-80 uppercase">Completed</span>
-                    <span className="text-xs opacity-40">
-                      {new Date(session.updatedAt).toLocaleDateString()}
-                    </span>
-                  </div>
+      ) : sessions.length > 0 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {sessions.map((session, i) => (
+            <motion.div
+              key={session._id}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.05, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="card hover-glow"
+              style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 24px' }}
+            >
+              <DiffBadge difficulty={session.difficulty} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>
+                  {session.problem}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 4 }}>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.02em' }}>
+                    {formatDistanceToNow(new Date(session.createdAt), { addSuffix: true })}
+                  </span>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, letterSpacing: '0.02em' }}>
+                    <Users size={11} /> {session.participant ? '2' : '1'}
+                  </span>
                 </div>
               </div>
-            ))
-          ) : (
-            <div className="col-span-full text-center py-16">
-              <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-accent/20 to-secondary/20 rounded-3xl flex items-center justify-center">
-                <Trophy className="w-10 h-10 text-accent/50" />
-              </div>
-              <p className="text-lg font-semibold opacity-70 mb-1">No sessions yet</p>
-              <p className="text-sm opacity-50">Start your coding journey today!</p>
-            </div>
-          )}
+
+              {session.status === 'active' ? (
+                <div className="badge badge-easy" style={{ animation: 'pulse-glow 2s infinite' }}>
+                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#10b981', marginRight: 6 }} />
+                  ACTIVE
+                </div>
+              ) : (
+                <span className="badge" style={{ background: 'rgba(255,255,255,0.04)', color: 'var(--text-muted)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  COMPLETED
+                </span>
+              )}
+            </motion.div>
+          ))}
         </div>
-      </div>
+      ) : (
+        <div className="card" style={{ textAlign: 'center', padding: '48px 24px' }}>
+          <Trophy size={36} color="var(--text-muted)" style={{ margin: '0 auto 16px', opacity: 0.5 }} />
+          <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 4 }}>No sessions yet</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: 12, opacity: 0.7 }}>Start your coding journey today!</p>
+        </div>
+      )}
     </div>
   );
+}
+
+function DiffBadge({ difficulty }) {
+  const d = difficulty?.toLowerCase();
+  const cls = d === 'easy' ? 'badge-easy' : d === 'medium' ? 'badge-medium' : 'badge-hard';
+  const label = difficulty ? difficulty.charAt(0).toUpperCase() + difficulty.slice(1) : '';
+  return <span className={`badge ${cls}`}>{label?.toUpperCase()}</span>;
 }
 
 export default RecentSessions;
