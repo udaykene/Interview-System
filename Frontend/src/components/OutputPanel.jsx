@@ -93,6 +93,15 @@ function OutputPanel({ output }) {
             ))}
           </div>
         )}
+
+        {data.stderr && (
+          <div style={{ marginTop: 20 }}>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'var(--accent-red)', marginBottom: 10, fontWeight: 600, letterSpacing: '0.06em' }}>STDERR</div>
+            <pre className="mono" style={{ color: 'var(--accent-red)', fontSize: 13, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+              {data.stderr}
+            </pre>
+          </div>
+        )}
       </div>
     );
   }

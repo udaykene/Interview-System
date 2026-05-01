@@ -40,6 +40,8 @@ const UserSchema = new mongoose.Schema(
     providerId: {
       type: String,
       default: null,
+      unique: true,
+      sparse: true,
     },
     role: {
       type: String,

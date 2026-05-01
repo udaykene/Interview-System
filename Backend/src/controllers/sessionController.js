@@ -139,7 +139,7 @@ export async function joinSession(req, res) {
   try {
     const { id } = req.params;
     const userId = req.user._id;
-    const { code } = req.body;
+    const { code } = req.body || {};
     const normalizedCode = typeof code === "string" ? code.toUpperCase() : "";
 
     const session = await Session.findById(id);
@@ -179,7 +179,7 @@ export async function joinSession(req, res) {
 
 export async function joinSessionByCode(req, res) {
   try {
-    const { code } = req.body;
+    const { code } = req.body || {};
     const normalizedCode = typeof code === "string" ? code.toUpperCase() : "";
     if (!normalizedCode) return res.status(400).json({ message: "Join code is required" });
 
@@ -187,7 +187,7 @@ export async function joinSessionByCode(req, res) {
     if (!session) return res.status(404).json({ message: "Session not found" });
 
     req.params.id = session._id.toString();
-    req.body.code = normalizedCode;
+    req.body = { ...(req.body || {}), code: normalizedCode };
     return joinSession(req, res);
   } catch (error) {
     console.log("Error in joinSessionByCode controller:", error.message);

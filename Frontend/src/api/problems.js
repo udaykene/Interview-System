@@ -13,6 +13,10 @@ export const problemsApi = {
     const res = await axiosInstance.post("/problems", payload);
     return res.data;
   },
+  bulkImport: async (payload) => {
+    const res = await axiosInstance.post("/problems/bulk-import", payload);
+    return res.data;
+  },
   update: async (slug, payload) => {
     const res = await axiosInstance.put(`/problems/${slug}`, payload);
     return res.data;

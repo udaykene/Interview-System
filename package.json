@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "build": "npm install --prefix Backend && npm install --prefix Frontend --include=dev && npm run build --prefix Frontend",
-    "start":"npm run start --prefix Backend"
+    "start":"npm run start --prefix Backend",
+    "piston:install": "node scripts/install-piston-runtimes.mjs"
   },
   "repository": {
     "type": "git",

@@ -29,6 +29,19 @@ export const useCreateProblem = () => {
   });
 };
 
+export const useBulkImportProblems = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: problemsApi.bulkImport,
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["problems"] });
+      const { created = 0, updated = 0, skipped = 0, invalid = 0 } = data.summary || {};
+      toast.success(`Import finished: ${created} created, ${updated} updated, ${skipped} skipped, ${invalid} invalid`);
+    },
+    onError: (err) => toast.error(err.response?.data?.message || "Failed to import problems"),
+  });
+};
+
 export const useDeleteProblem = () => {
   const qc = useQueryClient();
   return useMutation({

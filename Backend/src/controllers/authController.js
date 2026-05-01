@@ -12,19 +12,7 @@ import {
 } from "../lib/tokens.js";
 import { sendVerificationEmail, sendPasswordResetEmail } from "../lib/emailService.js";
 import { upsertStreamUser } from "../lib/stream.js";
-
-// Helper to generate a username from name/email
-const generateUsername = async (base) => {
-  const slug = base.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 15) || "user";
-  let username = slug;
-  let counter = 0;
-  while (await User.findOne({ username })) {
-    counter++;
-    username = `${slug}${Math.floor(1000 + Math.random() * 9000)}`;
-    if (counter > 10) username = `user${Date.now().toString(36)}`;
-  }
-  return username;
-};
+import { generateUsername, resolveDisplayName, normalizeDisplayName } from "../lib/userIdentity.js";
 
 export const issueTokens = async (res, user) => {
   const isProd = ENV.NODE_ENV === "production";
@@ -51,16 +39,18 @@ export const handleOAuthCallback = async (req, res) => {
 // Local Auth: Register
 // ─────────────────────────────────────────────
 export const register = async (req, res) => {
-  const { name, email, password } = req.body;
-  if (!name || !email || !password)
-    return res.status(400).json({ message: "Name, email and password are required" });
+  const { email, password } = req.body;
+  if (!email || !password)
+    return res.status(400).json({ message: "Email and password are required" });
   if (password.length < 6)
     return res.status(400).json({ message: "Password must be at least 6 characters" });
 
   try {
-    const existing = await User.findOne({ email: email.toLowerCase() });
+    const normalizedEmail = email.toLowerCase().trim();
+    const existing = await User.findOne({ email: normalizedEmail });
     if (existing) return res.status(409).json({ message: "Email already registered" });
 
+    const name = resolveDisplayName({ email: normalizedEmail });
     const passwordHash = await bcrypt.hash(password, 12);
     const verificationToken = crypto.randomBytes(32).toString("hex");
     const username = await generateUsername(name);
@@ -70,14 +60,14 @@ export const register = async (req, res) => {
 
     const user = await User.create({
       name,
-      email: email.toLowerCase(),
+      email: normalizedEmail,
       password: passwordHash,
       username,
       provider: "local",
       emailVerified: false,
       emailVerificationToken: verificationToken,
       emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      role: adminEmailSet.has(email.toLowerCase()) ? "admin" : "user",
+      role: adminEmailSet.has(normalizedEmail) ? "admin" : "user",
     });
 
     await sendVerificationEmail(user, verificationToken);
@@ -243,16 +233,22 @@ export const updateProfile = async (req, res) => {
   const userId = req.user._id;
 
   try {
+    const normalizedName = name === undefined ? undefined : normalizeDisplayName(name);
+
     if (username) {
       const existing = await User.findOne({ username: username.toLowerCase(), _id: { $ne: userId } });
       if (existing) return res.status(409).json({ message: "Username already taken" });
+    }
+
+    if (name !== undefined && !normalizedName) {
+      return res.status(400).json({ message: "Name cannot be empty" });
     }
 
     const updated = await User.findByIdAndUpdate(
       userId,
       {
         $set: {
-          ...(name && { name }),
+          ...(normalizedName !== undefined && { name: normalizedName }),
           ...(username && { username: username.toLowerCase() }),
           ...(bio !== undefined && { bio }),
           ...(profileImage !== undefined && { profileImage }),

@@ -8,5 +8,8 @@ export default defineConfig({
   server: {
     host: true, // This exposes the project to your local network
     port: 5173, // Optional: keeps it on your preferred port
+     watch: {
+      usePolling: true,
+    },
   },
 });

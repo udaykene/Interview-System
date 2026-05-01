@@ -3,27 +3,62 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { Strategy as GitHubStrategy } from "passport-github2";
 import { ENV } from "./env.js";
 import User from "../models/User.js";
+import { generateUsername, resolveDisplayName } from "./userIdentity.js";
 
 const adminEmailSet = new Set(
   ENV.ADMIN_EMAILS.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean),
 );
 
-const upsertOAuthUser = async ({ provider, providerId, email, name, profileImage }) => {
+const upsertOAuthUser = async ({ provider, providerId, email, name, username, profileImage }) => {
+  const normalizedEmail = email.toLowerCase().trim();
   const existing = await User.findOne({ provider, providerId });
   if (existing) return existing;
 
-  const existingByEmail = await User.findOne({ email });
-  if (existingByEmail) return existingByEmail;
+  const existingByEmail = await User.findOne({ email: normalizedEmail });
+  if (existingByEmail) {
+    const needsUpdate =
+      existingByEmail.name !== resolveDisplayName({ name: existingByEmail.name, username: existingByEmail.username, email: normalizedEmail }) ||
+      !existingByEmail.username ||
+      !existingByEmail.providerId;
 
-  const role = adminEmailSet.has(email.toLowerCase()) ? "admin" : "user";
+    if (needsUpdate) {
+      existingByEmail.name = resolveDisplayName({
+        name: existingByEmail.name || name,
+        username: existingByEmail.username || username,
+        email: normalizedEmail,
+      });
+
+      if (!existingByEmail.username) {
+        existingByEmail.username = await generateUsername(username || existingByEmail.name || normalizedEmail);
+      }
+
+      if (!existingByEmail.providerId && existingByEmail.provider === provider) {
+        existingByEmail.providerId = providerId;
+      }
+
+      if (!existingByEmail.profileImage && profileImage) {
+        existingByEmail.profileImage = profileImage;
+      }
+
+      await existingByEmail.save();
+    }
+
+    return existingByEmail;
+  }
+
+  const role = adminEmailSet.has(normalizedEmail) ? "admin" : "user";
+  const resolvedName = resolveDisplayName({ name, username, email: normalizedEmail });
+  const generatedUsername = await generateUsername(username || resolvedName || normalizedEmail);
 
   const user = await User.create({
     provider,
     providerId,
-    email,
-    name,
+    email: normalizedEmail,
+    name: resolvedName,
+    username: generatedUsername,
     profileImage,
     role,
+    emailVerified: true,
   });
 
   return user;
@@ -40,13 +75,15 @@ passport.use(
       try {
         const email =
           profile.emails?.[0]?.value || `${profile.id}@google.local`;
-        const name = profile.displayName || "User";
+        const name = profile.displayName || "";
+        const username = profile.name?.givenName || "";
         const profileImage = profile.photos?.[0]?.value || "";
         const user = await upsertOAuthUser({
           provider: "google",
           providerId: profile.id,
           email,
           name,
+          username,
           profileImage,
         });
         done(null, user);
@@ -71,13 +108,15 @@ passport.use(
           profile.emails?.find((e) => e.verified)?.value ||
           profile.emails?.[0]?.value ||
           `${profile.id}@github.local`;
-        const name = profile.displayName || profile.username || "User";
+        const name = profile.displayName || "";
+        const username = profile.username || "";
         const profileImage = profile.photos?.[0]?.value || "";
         const user = await upsertOAuthUser({
           provider: "github",
           providerId: profile.id,
           email,
           name,
+          username,
           profileImage,
         });
         done(null, user);
