@@ -6,9 +6,9 @@ import OutputPanel from "../components/OutputPanel";
 import CodeEditorPanel from "../components/CodeEditorPanel";
 import toast from "react-hot-toast";
 import confetti from "canvas-confetti";
-import { useProblem } from "../hooks/useProblems";
+import { useProblem, useToggleFavorite, useFavorites } from "../hooks/useProblems";
 import axiosInstance from "../lib/axios";
-import { Loader2, Code2, Play, CheckCircle2 } from "lucide-react";
+import { Loader2, Code2, Play, CheckCircle2, Star } from "lucide-react";
 
 function ProblemPage() {
   const { id } = useParams();
@@ -20,6 +20,10 @@ function ProblemPage() {
 
   const { data: problemData, isLoading } = useProblem(id);
   const problem = problemData?.problem;
+  const toggleFavMutation = useToggleFavorite();
+  const { data: favData } = useFavorites();
+  const favoriteIds = (favData?.favorites || []).map(f => typeof f === 'string' ? f : f._id);
+  const isFavorited = problem ? favoriteIds.includes(problem._id) : false;
 
   useEffect(() => {
     setOutput(null);
@@ -99,16 +103,37 @@ function ProblemPage() {
           <Panel defaultSize={45} minSize={30}>
             <div style={{ height: '100%', background: '#0a0a0a', borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column' }}>
               <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
-                <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12, letterSpacing: '-0.02em' }}>
-                  {problem.title}
-                  <span className="badge" style={{
-                    background: `${getDifficultyColor(problem.difficulty)}12`,
-                    color: getDifficultyColor(problem.difficulty),
-                    border: `1px solid ${getDifficultyColor(problem.difficulty)}25`,
-                  }}>
-                    {problem.difficulty?.toUpperCase()}
-                  </span>
-                </h1>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12, letterSpacing: '-0.02em', flex: 1 }}>
+                    {problem.title}
+                    <span className="badge" style={{
+                      background: `${getDifficultyColor(problem.difficulty)}12`,
+                      color: getDifficultyColor(problem.difficulty),
+                      border: `1px solid ${getDifficultyColor(problem.difficulty)}25`,
+                    }}>
+                      {problem.difficulty?.toUpperCase()}
+                    </span>
+                  </h1>
+                  <button
+                    onClick={() => toggleFavMutation.mutate(problem._id)}
+                    title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                    style={{
+                      background: isFavorited ? 'rgba(245,158,11,0.1)' : 'rgba(255,255,255,0.04)',
+                      border: `1px solid ${isFavorited ? 'rgba(245,158,11,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                      borderRadius: 10, padding: '8px 12px', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      transition: 'all 0.25s', flexShrink: 0,
+                      color: isFavorited ? '#f59e0b' : 'var(--text-muted)',
+                      fontSize: 12, fontWeight: 600,
+                      fontFamily: "'JetBrains Mono', monospace",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = isFavorited ? 'rgba(245,158,11,0.4)' : 'rgba(255,255,255,0.15)'}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = isFavorited ? 'rgba(245,158,11,0.25)' : 'rgba(255,255,255,0.08)'}
+                  >
+                    <Star size={14} fill={isFavorited ? '#f59e0b' : 'none'} />
+                    {isFavorited ? 'Favorited' : 'Favorite'}
+                  </button>
+                </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {problem.tags?.map(t => (
                     <span key={t} style={{

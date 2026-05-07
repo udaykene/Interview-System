@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContextState";
 import { motion, AnimatePresence } from "framer-motion";
-import { Code2, LayoutDashboard, BookOpen, LogOut, User, ChevronDown, Shield } from "lucide-react";
+import { Code2, LayoutDashboard, BookOpen, LogOut, User, ChevronDown, Shield, Users, BarChart3 } from "lucide-react";
 
 function Navbar() {
   const { user, logout } = useAuth();
@@ -20,7 +20,7 @@ function Navbar() {
   return (
     <nav className="navbar">
       {/* Logo */}
-      <Link to="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', flexShrink: 0 }}>
+      <Link to="/problems" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', flexShrink: 0 }}>
         <div style={{
           width: 30, height: 30, background: 'var(--gradient-brand)',
           borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -35,8 +35,9 @@ function Navbar() {
 
       {/* Nav Links */}
       <div className="md-hidden" style={{ display: 'flex', gap: 4, flex: 1 }}>
-        <NavLink to="/dashboard" icon={<LayoutDashboard size={14} />} active={isActive('/dashboard')}>Dashboard</NavLink>
-        <NavLink to="/problems" icon={<BookOpen size={14} />} active={isActive('/problems')}>Problems</NavLink>
+        <NavLink to="/problems" icon={<BookOpen size={14} />} active={isActive('/problems') || isActive('/problem')}>Problems</NavLink>
+        <NavLink to="/interview" icon={<Users size={14} />} active={isActive('/interview')}>Interview</NavLink>
+        <NavLink to="/dashboard" icon={<BarChart3 size={14} />} active={isActive('/dashboard')}>Dashboard</NavLink>
         {user?.role === "admin" && (
           <NavLink to="/admin/problems" icon={<Shield size={14} />} active={isActive('/admin/problems')}>Admin</NavLink>
         )}
@@ -104,8 +105,11 @@ function Navbar() {
                   <DropdownItem icon={<User size={14} />} onClick={() => { navigate(`/profile`); setDropdownOpen(false); }}>
                     My Profile
                   </DropdownItem>
-                  <DropdownItem icon={<LayoutDashboard size={14} />} onClick={() => { navigate('/dashboard'); setDropdownOpen(false); }}>
+                  <DropdownItem icon={<BarChart3 size={14} />} onClick={() => { navigate('/dashboard'); setDropdownOpen(false); }}>
                     Dashboard
+                  </DropdownItem>
+                  <DropdownItem icon={<Users size={14} />} onClick={() => { navigate('/interview'); setDropdownOpen(false); }}>
+                    Interview
                   </DropdownItem>
                   <DropdownItem icon={<BookOpen size={14} />} onClick={() => { navigate('/problems'); setDropdownOpen(false); }}>
                     Problems

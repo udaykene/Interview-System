@@ -53,3 +53,23 @@ export const useDeleteProblem = () => {
     onError: (err) => toast.error(err.response?.data?.message || "Failed to delete problem"),
   });
 };
+
+export const useToggleFavorite = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: problemsApi.toggleFavorite,
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["favorites"] });
+      qc.invalidateQueries({ queryKey: ["problems"] });
+      toast.success(data.isFavorited ? "Added to favorites" : "Removed from favorites");
+    },
+    onError: (err) => toast.error(err.response?.data?.message || "Failed to toggle favorite"),
+  });
+};
+
+export const useFavorites = () => {
+  return useQuery({
+    queryKey: ["favorites"],
+    queryFn: problemsApi.getFavorites,
+  });
+};

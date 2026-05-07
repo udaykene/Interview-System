@@ -25,4 +25,12 @@ export const problemsApi = {
     const res = await axiosInstance.delete(`/problems/${slug}`);
     return res.data;
   },
+  toggleFavorite: async (problemId) => {
+    const res = await axiosInstance.post(`/problems/${problemId}/favorite`);
+    return res.data;
+  },
+  getFavorites: async () => {
+    const res = await axiosInstance.get("/problems/favorites");
+    return res.data;
+  },
 };

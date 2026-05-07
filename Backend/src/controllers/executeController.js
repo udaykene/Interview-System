@@ -1,5 +1,7 @@
 import axios from "axios";
 import Problem from "../models/Problem.js";
+import Submission from "../models/Submission.js";
+import User from "../models/User.js";
 import { ENV } from "../lib/env.js";
 
 const PISTON_API = ENV.PISTON_API || "https://emkc.org/api/v2/piston";
@@ -600,6 +602,37 @@ export async function submitCode(req, res) {
       results: testResults,
       stderr: rawError,
     });
+
+    // Save submission record asynchronously (non-blocking)
+    try {
+      await Submission.create({
+        userId: req.user._id,
+        problemId: problem._id,
+        language,
+        code,
+        status: finalStatus,
+        passedTests: passed,
+        totalTests: total,
+      });
+
+      // Update user stats if all tests passed
+      if (allPassed) {
+        // Only increment problemsSolved if this is the first time solving this problem
+        const previousAccepted = await Submission.countDocuments({
+          userId: req.user._id,
+          problemId: problem._id,
+          status: "Accepted",
+        });
+        // previousAccepted is now >= 1 (includes the one we just created)
+        if (previousAccepted === 1) {
+          await User.findByIdAndUpdate(req.user._id, {
+            $inc: { "stats.problemsSolved": 1 },
+          });
+        }
+      }
+    } catch (saveErr) {
+      console.error("Error saving submission record:", saveErr.message);
+    }
   } catch (error) {
     console.error("Error in submitCode:", error.message);
     res.status(500).json({ message: "Code execution failed: " + error.message });

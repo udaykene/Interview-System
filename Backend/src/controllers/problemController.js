@@ -1,4 +1,5 @@
 import Problem from "../models/Problem.js";
+import User from "../models/User.js";
 
 const normalizeSlug = (value) =>
   String(value || "")
@@ -219,3 +220,36 @@ export async function deleteProblem(req, res) {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
+
+export async function toggleFavorite(req, res) {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(req.user._id);
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
+
+    const index = user.favorites.indexOf(id);
+    if (index === -1) {
+      user.favorites.push(id);
+    } else {
+      user.favorites.splice(index, 1);
+    }
+    await user.save();
+
+    res.status(200).json({ favorites: user.favorites, isFavorited: index === -1 });
+  } catch (error) {
+    console.error("Error in toggleFavorite:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+export async function getFavorites(req, res) {
+  try {
+    const user = await User.findById(req.user._id).populate("favorites", "title slug difficulty category tags acceptanceRate");
+    if (!user) return res.status(401).json({ message: "Unauthorized" });
+    res.status(200).json({ favorites: user.favorites });
+  } catch (error) {
+    console.error("Error in getFavorites:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+

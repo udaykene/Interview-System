@@ -7,6 +7,7 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
 import DashboardPage from "./pages/DashboardPage";
+import InterviewPage from "./pages/InterviewPage";
 import ProblemPage from "./pages/ProblemPage";
 import ProblemsPage from "./pages/ProblemsPage";
 import SessionPage from "./pages/SessionsPage";
@@ -47,14 +48,15 @@ function App() {
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={!isSignedIn ? <LoginPage /> : <Navigate to="/dashboard" />} />
-        <Route path="/signup" element={!isSignedIn ? <SignupPage /> : <Navigate to="/dashboard" />} />
-        <Route path="/forgot-password" element={!isSignedIn ? <ForgotPasswordPage /> : <Navigate to="/dashboard" />} />
-        <Route path="/reset-password/:token" element={!isSignedIn ? <ResetPasswordPage /> : <Navigate to="/dashboard" />} />
+        <Route path="/login" element={!isSignedIn ? <LoginPage /> : <Navigate to="/problems" />} />
+        <Route path="/signup" element={!isSignedIn ? <SignupPage /> : <Navigate to="/problems" />} />
+        <Route path="/forgot-password" element={!isSignedIn ? <ForgotPasswordPage /> : <Navigate to="/problems" />} />
+        <Route path="/reset-password/:token" element={!isSignedIn ? <ResetPasswordPage /> : <Navigate to="/problems" />} />
         <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
 
         {/* Protected Routes */}
         <Route path="/dashboard" element={isSignedIn ? <DashboardPage /> : <Navigate to="/login" />} />
+        <Route path="/interview" element={isSignedIn ? <InterviewPage /> : <Navigate to="/login" />} />
         <Route path="/profile" element={isSignedIn ? <ProfilePage /> : <Navigate to="/login" />} />
         <Route path="/problems" element={isSignedIn ? <ProblemsPage /> : <Navigate to="/login" />} />
         <Route path="/problem/:id" element={isSignedIn ? <ProblemPage /> : <Navigate to="/login" />} />

@@ -1,23 +1,29 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import Navbar from "../components/Navbar";
-import { useProblems } from "../hooks/useProblems";
-import { Search, CheckCircle2, ChevronRight, Loader2 } from "lucide-react";
+import { useProblems, useToggleFavorite, useFavorites } from "../hooks/useProblems";
+import { Search, CheckCircle2, ChevronRight, Loader2, Star, ListFilter } from "lucide-react";
 import { useAuth } from "../context/AuthContextState";
 
 function ProblemsPage() {
+  const navigate = useNavigate();
   const { data, isLoading } = useProblems();
   const { user } = useAuth();
+  const { data: favData } = useFavorites();
+  const toggleFavMutation = useToggleFavorite();
   const problems = data?.problems || [];
+  const favoriteIds = (favData?.favorites || []).map(f => typeof f === 'string' ? f : f._id);
 
   const [search, setSearch] = useState("");
   const [diffFilter, setDiffFilter] = useState("all");
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   const filtered = problems.filter(p => {
     const matchSearch = p.title.toLowerCase().includes(search.toLowerCase()) || p.tags?.some(t => t.toLowerCase().includes(search.toLowerCase()));
     const matchDiff = diffFilter === "all" || p.difficulty.toLowerCase() === diffFilter;
-    return matchSearch && matchDiff;
+    const matchFav = !showFavoritesOnly || favoriteIds.includes(p._id);
+    return matchSearch && matchDiff && matchFav;
   });
 
   const getDifficultyColor = (diff) => {
@@ -28,6 +34,12 @@ function ProblemsPage() {
   };
 
   const isSolved = (problemId) => user?.stats?.solvedProblems?.includes(problemId);
+  const isFavorited = (problemId) => favoriteIds.includes(problemId);
+
+  const handleToggleFavorite = (e, problemId) => {
+    e.stopPropagation();
+    toggleFavMutation.mutate(problemId);
+  };
 
   return (
     <div style={{ minHeight: '100vh', background: '#050505' }}>
@@ -51,7 +63,7 @@ function ProblemsPage() {
         {/* Filters */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.5 }}
-          style={{ display: 'flex', gap: 16, marginBottom: 28, flexWrap: 'wrap' }}>
+          style={{ display: 'flex', gap: 16, marginBottom: 28, flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ position: 'relative', flex: 1, minWidth: 260 }}>
             <Search size={15} color="var(--text-muted)" style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)' }} />
             <input className="input" placeholder="Search problems or tags..."
@@ -72,6 +84,23 @@ function ProblemsPage() {
               </button>
             ))}
           </div>
+          {/* Favorites filter */}
+          <button
+            onClick={() => setShowFavoritesOnly(f => !f)}
+            title={showFavoritesOnly ? "Show all" : "Show favorites only"}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '9px 16px', borderRadius: 12, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              fontFamily: "'JetBrains Mono', monospace", letterSpacing: '0.04em',
+              border: `1px solid ${showFavoritesOnly ? 'rgba(245,158,11,0.3)' : 'rgba(255,255,255,0.06)'}`,
+              background: showFavoritesOnly ? 'rgba(245,158,11,0.08)' : 'rgba(255,255,255,0.03)',
+              color: showFavoritesOnly ? '#f59e0b' : 'var(--text-secondary)',
+              transition: 'all 0.25s',
+            }}
+          >
+            <Star size={12} fill={showFavoritesOnly ? '#f59e0b' : 'none'} />
+            FAVS
+          </button>
         </motion.div>
 
         {/* Table */}
@@ -84,13 +113,14 @@ function ProblemsPage() {
             </div>
           ) : filtered.length === 0 ? (
             <div style={{ padding: 64, textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
-              No problems found matching your criteria.
+              {showFavoritesOnly ? "No favorite problems yet. Star some problems to see them here!" : "No problems found matching your criteria."}
             </div>
           ) : (
             <table className="problem-table">
               <thead>
                 <tr>
                   <th style={{ width: 44 }}>Status</th>
+                  <th style={{ width: 44 }}></th>
                   <th>Title</th>
                   <th style={{ width: 120 }}>Difficulty</th>
                   <th style={{ width: 120 }}>Acceptance</th>
@@ -100,13 +130,32 @@ function ProblemsPage() {
               <tbody>
                 {filtered.map((problem, i) => (
                   <tr key={problem.slug} className="problem-row"
-                    onClick={() => window.location.href = `/problem/${problem.slug}`}>
+                    onClick={() => navigate(`/problem/${problem.slug}`)}>
                     <td style={{ textAlign: 'center' }}>
                       {isSolved(problem._id) ? (
                         <CheckCircle2 size={16} color="var(--accent-green)" />
                       ) : (
                         <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', margin: '0 auto' }} />
                       )}
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <button
+                        onClick={(e) => handleToggleFavorite(e, problem._id)}
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          transition: 'transform 0.2s',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.2)'}
+                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                      >
+                        <Star
+                          size={15}
+                          color={isFavorited(problem._id) ? '#f59e0b' : 'rgba(255,255,255,0.15)'}
+                          fill={isFavorited(problem._id) ? '#f59e0b' : 'none'}
+                          style={{ transition: 'all 0.2s' }}
+                        />
+                      </button>
                     </td>
                     <td>
                       <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', marginBottom: 6, letterSpacing: '-0.01em' }}>
