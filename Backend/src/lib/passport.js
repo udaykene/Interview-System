@@ -4,15 +4,39 @@ import { Strategy as GitHubStrategy } from "passport-github2";
 import { ENV } from "./env.js";
 import User from "../models/User.js";
 import { generateUsername, resolveDisplayName } from "./userIdentity.js";
+import { resolveProfileImageUpdate } from "./cloudinary.js";
 
 const adminEmailSet = new Set(
   ENV.ADMIN_EMAILS.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean),
 );
 
+const syncOAuthProfileImage = async (user, profileImage) => {
+  if (!profileImage) return user;
+
+  const imageUpdate = await resolveProfileImageUpdate({
+    incomingImage: profileImage,
+    existingImage: user.profileImage,
+    existingPublicId: user.profileImagePublicId,
+    userId: user._id.toString(),
+  });
+
+  if (!imageUpdate) return user;
+
+  user.profileImage = imageUpdate.profileImage;
+  user.profileImagePublicId = imageUpdate.profileImagePublicId;
+  await user.save();
+  return user;
+};
+
 const upsertOAuthUser = async ({ provider, providerId, email, name, username, profileImage }) => {
   const normalizedEmail = email.toLowerCase().trim();
   const existing = await User.findOne({ provider, providerId });
-  if (existing) return existing;
+  if (existing) {
+    if (provider === "google") {
+      return syncOAuthProfileImage(existing, profileImage);
+    }
+    return existing;
+  }
 
   const existingByEmail = await User.findOne({ email: normalizedEmail });
   if (existingByEmail) {
@@ -43,6 +67,10 @@ const upsertOAuthUser = async ({ provider, providerId, email, name, username, pr
       await existingByEmail.save();
     }
 
+    if (provider === "google") {
+      return syncOAuthProfileImage(existingByEmail, profileImage);
+    }
+
     return existingByEmail;
   }
 
@@ -56,10 +84,13 @@ const upsertOAuthUser = async ({ provider, providerId, email, name, username, pr
     email: normalizedEmail,
     name: resolvedName,
     username: generatedUsername,
-    profileImage,
     role,
     emailVerified: true,
   });
+
+  if (provider === "google") {
+    return syncOAuthProfileImage(user, profileImage);
+  }
 
   return user;
 };

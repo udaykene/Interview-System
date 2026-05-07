@@ -13,6 +13,7 @@ import {
 import { sendVerificationEmail, sendPasswordResetEmail } from "../lib/emailService.js";
 import { upsertStreamUser } from "../lib/stream.js";
 import { generateUsername, resolveDisplayName, normalizeDisplayName } from "../lib/userIdentity.js";
+import { resolveProfileImageUpdate } from "../lib/cloudinary.js";
 
 export const issueTokens = async (res, user) => {
   const isProd = ENV.NODE_ENV === "production";
@@ -244,6 +245,13 @@ export const updateProfile = async (req, res) => {
       return res.status(400).json({ message: "Name cannot be empty" });
     }
 
+    const profileImageUpdate = await resolveProfileImageUpdate({
+      incomingImage: profileImage,
+      existingImage: req.user.profileImage,
+      existingPublicId: req.user.profileImagePublicId,
+      userId: userId.toString(),
+    });
+
     const updated = await User.findByIdAndUpdate(
       userId,
       {
@@ -251,7 +259,7 @@ export const updateProfile = async (req, res) => {
           ...(normalizedName !== undefined && { name: normalizedName }),
           ...(username && { username: username.toLowerCase() }),
           ...(bio !== undefined && { bio }),
-          ...(profileImage !== undefined && { profileImage }),
+          ...(profileImageUpdate || {}),
           ...(socialLinks && { socialLinks }),
         },
       },
