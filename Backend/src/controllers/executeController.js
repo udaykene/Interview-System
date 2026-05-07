@@ -661,7 +661,13 @@ export async function submitCode(req, res) {
     }));
 
     const testRunner = buildTestRunner(language, code, testInputs, problem.functionName || "solution");
+
+    // ── Measure runtime ──
+    const startTime = performance.now();
     const result = await executePiston(language, testRunner);
+    const runtimeMs = Math.round(performance.now() - startTime);
+    // ─────────────────────
+
     const rawOutput = result.run?.stdout || result.run?.output || "";
     const compileOutput = collectPistonOutput(result.compile);
     const runErrorOutput = [result.run?.stderr, result.run?.output && !result.run?.stdout ? result.run.output : ""]
@@ -671,12 +677,34 @@ export async function submitCode(req, res) {
     const rawError = [compileOutput, runErrorOutput].filter(Boolean).join("\n").trim();
 
     if (result.compile?.code) {
+      // Save compilation error submission (no runtime)
+      try {
+        await Submission.create({
+          userId: req.user._id,
+          problemId: problem._id,
+          language,
+          code,
+          status: "Compilation Error",
+          passedTests: 0,
+          totalTests: testCases.length,
+          runtimeMs: null,
+        });
+      } catch (saveErr) {
+        console.error("Error saving compilation error submission:", saveErr.message);
+      }
+
+      // Update problem stats
+      problem.totalSubmissions = (problem.totalSubmissions || 0) + 1;
+      problem.acceptanceRate = Math.round(((problem.successfulSubmissions || 0) / problem.totalSubmissions) * 100);
+      await problem.save();
+
       return res.status(200).json({
         status: "Compilation Error",
         passedTests: 0,
         totalTests: testCases.length,
         results: buildCompilationErrorResults(testCases, { maskHiddenDetails: true }),
         stderr: rawError,
+        runtimeMs: null,
       });
     }
 
@@ -702,15 +730,8 @@ export async function submitCode(req, res) {
         ? "Execution Error"
         : "Wrong Answer";
 
-    res.status(200).json({
-      status: finalStatus,
-      passedTests: passed,
-      totalTests: total,
-      results: testResults,
-      stderr: rawError,
-    });
-
-    // Save submission record asynchronously (non-blocking)
+    // Save submission record BEFORE response (needed for percentile)
+    let beatsPercent = null;
     try {
       await Submission.create({
         userId: req.user._id,
@@ -720,11 +741,11 @@ export async function submitCode(req, res) {
         status: finalStatus,
         passedTests: passed,
         totalTests: total,
+        runtimeMs,
       });
 
       // Update user stats if all tests passed
       if (allPassed) {
-        // Only increment problemsSolved if this is the first time solving this problem
         const previousAccepted = await Submission.countDocuments({
           userId: req.user._id,
           problemId: problem._id,
@@ -736,12 +757,61 @@ export async function submitCode(req, res) {
             $inc: { "stats.problemsSolved": 1 },
           });
         }
+
+        // Compute "beats X%" percentile
+        const acceptedForProblem = await Submission.countDocuments({
+          problemId: problem._id,
+          language,
+          status: "Accepted",
+          runtimeMs: { $ne: null },
+        });
+
+        if (acceptedForProblem >= 10) {
+          const slowerCount = await Submission.countDocuments({
+            problemId: problem._id,
+            language,
+            status: "Accepted",
+            runtimeMs: { $ne: null, $gt: runtimeMs },
+          });
+          beatsPercent = Math.round((slowerCount / acceptedForProblem) * 100 * 10) / 10;
+        }
       }
     } catch (saveErr) {
       console.error("Error saving submission record:", saveErr.message);
     }
+
+    res.status(200).json({
+      status: finalStatus,
+      passedTests: passed,
+      totalTests: total,
+      results: testResults,
+      stderr: rawError,
+      runtimeMs,
+      beatsPercent,
+    });
   } catch (error) {
     console.error("Error in submitCode:", error.message);
     res.status(500).json({ message: "Code execution failed: " + error.message });
+  }
+}
+
+// ─────────────────────────────────────────────
+// Get user's submissions for a specific problem
+// ─────────────────────────────────────────────
+export async function getSubmissionsForProblem(req, res) {
+  try {
+    const { problemId } = req.params;
+    const submissions = await Submission.find({
+      userId: req.user._id,
+      problemId,
+    })
+      .sort({ createdAt: -1 })
+      .select("status language runtimeMs passedTests totalTests createdAt")
+      .limit(50);
+
+    res.status(200).json({ submissions });
+  } catch (error) {
+    console.error("Error in getSubmissionsForProblem:", error.message);
+    res.status(500).json({ message: "Failed to fetch submissions" });
   }
 }

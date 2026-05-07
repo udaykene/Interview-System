@@ -35,6 +35,10 @@ const SubmissionSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    runtimeMs: {
+      type: Number,
+      default: null,
+    },
   },
   { timestamps: true }
 );
@@ -43,6 +47,8 @@ const SubmissionSchema = new mongoose.Schema(
 SubmissionSchema.index({ userId: 1, createdAt: -1 });
 // Index for checking if a problem is solved
 SubmissionSchema.index({ userId: 1, problemId: 1, status: 1 });
+// Index for percentile queries (same problem, same language, accepted only)
+SubmissionSchema.index({ problemId: 1, language: 1, status: 1, runtimeMs: 1 });
 
 const Submission = mongoose.model("Submission", SubmissionSchema);
 

@@ -43,7 +43,7 @@ function OutputPanel({ output }) {
           <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px 18px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: 'var(--text-muted)', marginBottom: 4, letterSpacing: '0.06em' }}>TIME</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: 'white' }}>
-              {data.run?.stdout ? '0ms' : 'N/A'}
+              {data.runtimeMs != null ? `${data.runtimeMs} ms` : 'N/A'}
             </div>
           </div>
         </div>
