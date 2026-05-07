@@ -451,20 +451,176 @@ async function executePiston(language, code, stdin = "") {
   }
 }
 
+function buildCompilationErrorResults(testCases, { maskHiddenDetails = false } = {}) {
+  return testCases.map((tc, i) => {
+    const baseResult = {
+      index: i,
+      status: "error",
+      passed: false,
+      isHidden: tc.isHidden,
+    };
+
+    if (maskHiddenDetails && tc.isHidden) {
+      return baseResult;
+    }
+
+    return {
+      ...baseResult,
+      error: "Compilation failed before tests could run",
+      actualOutput: "",
+      expectedOutput: tc.expectedOutput,
+      input: tc.input,
+    };
+  });
+}
+
+function parseStructuredTestResults(
+  testCases,
+  rawOutput,
+  rawError,
+  { maskHiddenDetails = false } = {}
+) {
+  const lines = rawOutput.split("\n");
+
+  return testCases.map((tc, i) => {
+    const line = lines.find((l) => l.startsWith(`TEST_${i}:`));
+
+    if (!line) {
+      const missingResult = {
+        index: i,
+        status: "error",
+        passed: false,
+        isHidden: tc.isHidden,
+      };
+
+      if (maskHiddenDetails && tc.isHidden) {
+        return missingResult;
+      }
+
+      return {
+        ...missingResult,
+        error: rawError || rawOutput || "No structured test result was produced",
+        actualOutput: "",
+        expectedOutput: tc.expectedOutput,
+        input: tc.input,
+      };
+    }
+
+    const parts = line.split(":");
+    const status = parts[1];
+    const normalizedStatus = status === "PASS" ? "pass" : status === "FAIL" ? "fail" : "error";
+    const passed = status === "PASS";
+
+    const baseResult = {
+      index: i,
+      status: normalizedStatus,
+      passed,
+      isHidden: tc.isHidden,
+    };
+
+    if (maskHiddenDetails && tc.isHidden) {
+      return baseResult;
+    }
+
+    let actual = "";
+    if (status === "PASS") {
+      actual = line.substring(`TEST_${i}:PASS:`.length);
+    } else if (status === "FAIL") {
+      const failPrefix = `TEST_${i}:FAIL:`;
+      const expectedSuffixIndex = line.lastIndexOf(":EXPECTED:");
+      if (expectedSuffixIndex !== -1) {
+        actual = line.substring(failPrefix.length, expectedSuffixIndex);
+      } else {
+        actual = line.substring(failPrefix.length);
+      }
+    }
+
+    return {
+      ...baseResult,
+      error: status !== "PASS" && status !== "FAIL" ? line.substring(`TEST_${i}:ERROR:`.length) : null,
+      actualOutput: actual,
+      expectedOutput: tc.expectedOutput,
+      input: tc.input,
+    };
+  });
+}
+
 // ─────────────────────────────────────────────
-// Run Code (no test cases, just execute)
+// Run Code (LeetCode-style visible test execution)
 // ─────────────────────────────────────────────
 export async function runCode(req, res) {
-  const { language, code, stdin } = req.body;
+  const { language, code, stdin, problemId } = req.body;
   if (!language || !code) return res.status(400).json({ message: "language and code are required" });
 
   try {
-    const result = await executePiston(language, code, stdin || "");
-    const run = result.run;
-    res.status(200).json({
-      stdout: run.stdout || "",
-      stderr: run.stderr || "",
-      exitCode: run.code,
+    if (!problemId) {
+      const rawResult = await executePiston(language, code, stdin || "");
+      const rawRun = rawResult.run;
+      return res.status(200).json({
+        stdout: rawRun.stdout || "",
+        stderr: rawRun.stderr || "",
+        exitCode: rawRun.code,
+      });
+    }
+
+    const problem = await Problem.findById(problemId);
+    if (!problem) return res.status(404).json({ message: "Problem not found" });
+
+    const visibleTestCases = (problem.testCases || []).filter((tc) => !tc.isHidden).slice(0, 3);
+
+    if (visibleTestCases.length === 0) {
+      const rawResult = await executePiston(language, code, stdin || "");
+      const rawRun = rawResult.run;
+      return res.status(200).json({
+        stdout: rawRun.stdout || "",
+        stderr: rawRun.stderr || "",
+        exitCode: rawRun.code,
+      });
+    }
+
+    const testInputs = visibleTestCases.map((tc) => ({
+      functionCall: tc.input,
+      expectedOutput: tc.expectedOutput,
+    }));
+
+    const testRunner = buildTestRunner(language, code, testInputs, problem.functionName || "solution");
+    const result = await executePiston(language, testRunner);
+    const rawOutput = result.run?.stdout || result.run?.output || "";
+    const compileOutput = collectPistonOutput(result.compile);
+    const runErrorOutput = [result.run?.stderr, result.run?.output && !result.run?.stdout ? result.run.output : ""]
+      .filter(Boolean)
+      .join("\n")
+      .trim();
+    const rawError = [compileOutput, runErrorOutput].filter(Boolean).join("\n").trim();
+
+    if (result.compile?.code) {
+      return res.status(200).json({
+        status: "Compilation Error",
+        passedTests: 0,
+        totalTests: visibleTestCases.length,
+        results: buildCompilationErrorResults(visibleTestCases),
+        stderr: rawError,
+      });
+    }
+
+    const testResults = parseStructuredTestResults(visibleTestCases, rawOutput, rawError);
+    const passed = testResults.filter((r) => r.status === "pass").length;
+    const total = testResults.length;
+    const allPassed = passed === total;
+    const hasErrors = testResults.some((r) => r.status === "error");
+
+    const finalStatus = allPassed
+      ? "Accepted"
+      : hasErrors
+        ? "Execution Error"
+        : "Wrong Answer";
+
+    return res.status(200).json({
+      status: finalStatus,
+      passedTests: passed,
+      totalTests: total,
+      results: testResults,
+      stderr: rawError,
     });
   } catch (error) {
     console.error("Error in runCode:", error.message);
@@ -473,7 +629,7 @@ export async function runCode(req, res) {
 }
 
 // ─────────────────────────────────────────────
-// Submit Code (run against test cases)
+// Submit Code (run against all test cases)
 // ─────────────────────────────────────────────
 export async function submitCode(req, res) {
   const { language, code, problemId, problemSlug } = req.body;
@@ -519,63 +675,14 @@ export async function submitCode(req, res) {
         status: "Compilation Error",
         passedTests: 0,
         totalTests: testCases.length,
-        results: testCases.map((tc, i) => ({
-          index: i,
-          status: "error",
-          passed: false,
-          error: "Compilation failed before tests could run",
-          actualOutput: "",
-          expectedOutput: tc.expectedOutput,
-          input: tc.isHidden ? "Hidden" : tc.input,
-          isHidden: tc.isHidden,
-        })),
+        results: buildCompilationErrorResults(testCases, { maskHiddenDetails: true }),
         stderr: rawError,
       });
     }
 
     // Parse test results
-    const lines = rawOutput.split("\n");
-    const testResults = testCases.map((tc, i) => {
-      const line = lines.find((l) => l.startsWith(`TEST_${i}:`));
-      if (!line) {
-        return {
-          index: i,
-          status: "error",
-          passed: false,
-          error: rawError || rawOutput || "No structured test result was produced",
-          actualOutput: "",
-          expectedOutput: tc.expectedOutput,
-          input: tc.isHidden ? "Hidden" : tc.input,
-          isHidden: tc.isHidden,
-        };
-      }
-
-      const parts = line.split(":");
-      const status = parts[1];
-
-      let actual = "";
-      if (status === "PASS") {
-        actual = line.substring(`TEST_${i}:PASS:`.length);
-      } else if (status === "FAIL") {
-        const failPrefix = `TEST_${i}:FAIL:`;
-        const expectedSuffixIndex = line.lastIndexOf(":EXPECTED:");
-        if (expectedSuffixIndex !== -1) {
-          actual = line.substring(failPrefix.length, expectedSuffixIndex);
-        } else {
-          actual = line.substring(failPrefix.length);
-        }
-      }
-
-      return {
-        index: i,
-        status: status === "PASS" ? "pass" : status === "FAIL" ? "fail" : "error",
-        passed: status === "PASS",
-        error: status !== "PASS" && status !== "FAIL" ? line.substring(`TEST_${i}:ERROR:`.length) : null,
-        actualOutput: actual,
-        expectedOutput: tc.expectedOutput,
-        input: tc.isHidden ? "Hidden" : tc.input,
-        isHidden: tc.isHidden,
-      };
+    const testResults = parseStructuredTestResults(testCases, rawOutput, rawError, {
+      maskHiddenDetails: true,
     });
 
     const passed = testResults.filter((r) => r.status === "pass").length;

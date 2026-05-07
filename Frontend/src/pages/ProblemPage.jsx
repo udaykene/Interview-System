@@ -44,11 +44,15 @@ function ProblemPage() {
   };
 
   const handleRunCode = async () => {
-    if (!code.trim()) return;
+    if (!code.trim() || !problem) return;
     setIsRunning(true);
     setOutput(null);
     try {
-      const res = await axiosInstance.post('/execute/run', { language: selectedLanguage, code });
+      const res = await axiosInstance.post('/execute/run', {
+        problemId: problem._id,
+        language: selectedLanguage,
+        code,
+      });
       setOutput({ type: 'run', data: res.data });
     } catch (err) {
       setOutput({ type: 'run', data: { error: err.response?.data?.message || err.response?.data?.error || err.message } });

@@ -24,29 +24,10 @@ function OutputPanel({ output }) {
     );
   }
 
-  if (type === 'run') {
-    return (
-      <div style={{ padding: 20, height: '100%', overflowY: 'auto' }}>
-        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'var(--text-muted)', marginBottom: 10, fontWeight: 600, letterSpacing: '0.06em' }}>STDOUT</div>
-        <pre className="mono" style={{ color: 'var(--text-primary)', fontSize: 13, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-          {data.stdout || "Program exited with no output"}
-        </pre>
-        {data.stderr && (
-          <div style={{ marginTop: 20 }}>
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'var(--accent-red)', marginBottom: 10, fontWeight: 600, letterSpacing: '0.06em' }}>STDERR</div>
-            <pre className="mono" style={{ color: 'var(--accent-red)', fontSize: 13, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
-              {data.stderr}
-            </pre>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  if (type === 'submit') {
+  const renderStructuredTestResults = () => {
     const isAccepted = data.status === 'Accepted';
     return (
-      <div style={{ padding: 20, height: '100%', overflowY: 'auto' }}>
+      <div style={{ padding: 20, height: '100%', overflowY: 'auto' }} key={`${type}-structured`}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 16, fontWeight: 700, marginBottom: 20, color: isAccepted ? 'var(--accent-green)' : 'var(--accent-red)', letterSpacing: '-0.01em' }}>
           {isAccepted ? <CheckCircle2 size={18} /> : <XCircle size={18} />}
           {data.status}
@@ -87,7 +68,7 @@ function OutputPanel({ output }) {
                     {res.error && <div><span style={{ color: 'var(--text-muted)' }}>Error:</span> <span style={{ color: 'var(--accent-yellow)' }}>{res.error}</span></div>}
                   </div>
                 ) : (
-                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'var(--text-muted)', fontStyle: 'italic', letterSpacing: '0.03em' }}>HIDDEN TEST CASE</div>
+                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.04em' }}>HIDDEN TEST CASE</div>
                 )}
               </div>
             ))}
@@ -104,6 +85,33 @@ function OutputPanel({ output }) {
         )}
       </div>
     );
+  };
+
+  if ((type === 'run' || type === 'submit') && Array.isArray(data.results)) {
+    return renderStructuredTestResults();
+  }
+
+  if (type === 'run') {
+    return (
+      <div style={{ padding: 20, height: '100%', overflowY: 'auto' }}>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'var(--text-muted)', marginBottom: 10, fontWeight: 600, letterSpacing: '0.06em' }}>STDOUT</div>
+        <pre className="mono" style={{ color: 'var(--text-primary)', fontSize: 13, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+          {data.stdout || "Program exited with no output"}
+        </pre>
+        {data.stderr && (
+          <div style={{ marginTop: 20 }}>
+            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'var(--accent-red)', marginBottom: 10, fontWeight: 600, letterSpacing: '0.06em' }}>STDERR</div>
+            <pre className="mono" style={{ color: 'var(--accent-red)', fontSize: 13, whiteSpace: 'pre-wrap', lineHeight: 1.6 }}>
+              {data.stderr}
+            </pre>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (type === 'submit') {
+    return renderStructuredTestResults();
   }
 
   return null;
