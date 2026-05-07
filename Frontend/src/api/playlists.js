@@ -5,6 +5,10 @@ export const playlistsApi = {
     const res = await axiosInstance.get("/playlists");
     return res.data;
   },
+  getById: async (id) => {
+    const res = await axiosInstance.get(`/playlists/${id}`);
+    return res.data;
+  },
   create: async (payload) => {
     const res = await axiosInstance.post("/playlists", payload);
     return res.data;

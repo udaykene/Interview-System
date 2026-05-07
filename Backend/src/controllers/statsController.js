@@ -26,7 +26,6 @@ export async function getUserStats(req, res) {
     );
 
     const totalProblems = await Problem.countDocuments();
-
     const byDifficulty = { Easy: 0, Medium: 0, Hard: 0 };
     const byCategory = {};
 
@@ -43,10 +42,22 @@ export async function getUserStats(req, res) {
     const acceptedCount = await Submission.countDocuments({ userId, status: "Accepted" });
     const acceptanceRate = totalSubmissions > 0 ? Math.round((acceptedCount / totalSubmissions) * 100 * 10) / 10 : 0;
 
+    // Get total counts for each difficulty
+    const [totalEasy, totalMedium, totalHard] = await Promise.all([
+      Problem.countDocuments({ difficulty: "Easy" }),
+      Problem.countDocuments({ difficulty: "Medium" }),
+      Problem.countDocuments({ difficulty: "Hard" }),
+    ]);
+
     res.status(200).json({
       totalSolved: solvedProblems.length,
       totalProblems,
       byDifficulty,
+      totalByDifficulty: {
+        Easy: totalEasy,
+        Medium: totalMedium,
+        Hard: totalHard,
+      },
       byCategory,
       totalSubmissions,
       acceptanceRate,

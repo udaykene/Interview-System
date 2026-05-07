@@ -6,7 +6,7 @@ import { useAuth } from "../context/AuthContextState";
 import { useUserStats, useUserActivity, useUserHistory } from "../hooks/useStats";
 import {
   CheckCircle2, Loader2, ChevronLeft, ChevronRight, Clock,
-  Flame, Target, TrendingUp, BarChart3, Calendar
+  Filter, BarChart3, TrendingUp, Target, Search, MoreVertical
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -16,262 +16,140 @@ const fadeUp = (delay = 0) => ({
   transition: { delay, duration: 0.6, ease: [0.16, 1, 0.3, 1] }
 });
 
-/* ─── Activity Heatmap (GitHub-style) ─────────────────── */
-function ActivityHeatmap({ activityMap = {} }) {
-  const weeks = useMemo(() => {
-    const today = new Date();
-    const result = [];
-    // Go back 52 weeks (364 days)
-    const startDate = new Date(today);
-    startDate.setDate(startDate.getDate() - 363);
-    // Align to Sunday
-    startDate.setDate(startDate.getDate() - startDate.getDay());
+/* ─── Topic Chart (Bubble-style) ─────────────────── */
+function TopicChart({ byCategory = {} }) {
+  const categories = Object.entries(byCategory).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
-    let currentDate = new Date(startDate);
-    let week = [];
+  if (categories.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '32px 16px', color: '#4b5563', fontSize: 13 }}>
+        Solve problems to see topics.
+      </div>
+    );
+  }
 
-    while (currentDate <= today) {
-      const dateStr = currentDate.toISOString().split("T")[0];
-      week.push({
-        date: dateStr,
-        count: activityMap[dateStr] || 0,
-        dayOfWeek: currentDate.getDay(),
-      });
+  // Position bubbles in a visually appealing pattern
+  const positions = [
+    { x: 35, y: 35 }, { x: 65, y: 30 },
+    { x: 45, y: 65 }, { x: 25, y: 55 }, { x: 70, y: 60 },
+  ];
 
-      if (currentDate.getDay() === 6) {
-        result.push(week);
-        week = [];
-      }
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-    if (week.length > 0) result.push(week);
-    return result;
-  }, [activityMap]);
+  return (
+    <div style={{ position: 'relative', width: '100%', aspectRatio: '1', padding: 8 }}>
+      {/* Concentric circle guides */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        opacity: 0.15,
+      }}>
+        <div style={{ width: '90%', height: '90%', borderRadius: '50%', border: '1px dashed #555', position: 'absolute' }} />
+        <div style={{ width: '60%', height: '60%', borderRadius: '50%', border: '1px dashed #555', position: 'absolute' }} />
+        <div style={{ width: '30%', height: '30%', borderRadius: '50%', border: '1px dashed #555', position: 'absolute' }} />
+      </div>
 
-  const getColor = (count) => {
-    if (count === 0) return "rgba(255,255,255,0.04)";
-    if (count <= 1) return "#0e4429";
-    if (count <= 3) return "#006d32";
-    if (count <= 5) return "#26a641";
-    return "#39d353";
-  };
+      {/* Topic bubbles */}
+      <svg viewBox="0 0 100 100" style={{ width: '100%', height: '100%' }}>
+        {categories.map(([cat, count], i) => {
+          const pos = positions[i] || { x: 50, y: 50 };
+          const r = 10 + Math.min(count * 2, 8);
+          return (
+            <g key={cat}>
+              <circle cx={pos.x} cy={pos.y} r={r} fill="#2a2a2a" stroke="#444" strokeWidth="0.5" />
+              <text
+                x={pos.x} y={pos.y}
+                fontSize="3"
+                fill="#10b981"
+                textAnchor="middle"
+                dominantBaseline="middle"
+                style={{ fontWeight: 500 }}
+              >
+                {cat.length > 8 ? cat.substring(0, 7) + '..' : cat}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
 
-  const totalSubmissions = Object.values(activityMap).reduce((s, c) => s + c, 0);
-  const activeDays = Object.values(activityMap).filter((c) => c > 0).length;
+      {/* Search icon */}
+      <div style={{
+        position: 'absolute', top: 4, right: 4, padding: 4,
+        cursor: 'pointer', color: '#6b7280',
+      }}>
+        <Search size={14} />
+      </div>
+    </div>
+  );
+}
 
-  // Get month labels
-  const monthLabels = useMemo(() => {
-    const labels = [];
-    let lastMonth = -1;
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    weeks.forEach((week, weekIdx) => {
-      const firstDay = week[0];
-      if (firstDay) {
-        const month = new Date(firstDay.date).getMonth();
-        if (month !== lastMonth) {
-          labels.push({ weekIdx, label: months[month] });
-          lastMonth = month;
-        }
-      }
-    });
-    return labels;
-  }, [weeks]);
+/* ─── Activity Chart (Bar Chart) ─────────────────── */
+function ActivityChart({ stats = {} }) {
+  const easy = stats.byDifficulty?.Easy || 0;
+  const medium = stats.byDifficulty?.Medium || 0;
+  const hard = stats.byDifficulty?.Hard || 0;
+
+  const months = ["Jan", "Feb", "Mar", "Apr", "May"];
+  const values = [2, 5, 1, 8, 4]; // placeholder data
+  const max = Math.max(...values, 1);
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-        <Calendar size={16} color="var(--accent-violet)" />
-        <h3 style={{ fontWeight: 700, fontSize: 16, letterSpacing: "-0.01em" }}>
-          Activity
-        </h3>
-        <span style={{
-          fontFamily: "'JetBrains Mono', monospace",
-          fontSize: 11,
-          color: "var(--text-muted)",
-          marginLeft: "auto",
-          letterSpacing: "0.03em",
-        }}>
-          {totalSubmissions} submissions in the last year
-        </span>
-      </div>
-
-      {/* Month labels */}
-      <div style={{ display: "flex", gap: 0, paddingLeft: 32, marginBottom: 4 }}>
-        {monthLabels.map((m, i) => (
-          <div
-            key={i}
-            style={{
-              position: "relative",
-              left: m.weekIdx * 13.5,
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 10,
-              color: "var(--text-muted)",
-              position: "absolute",
-              letterSpacing: "0.02em",
-            }}
-          >
-            {m.label}
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: "flex", gap: 2.5, overflowX: "auto", paddingBottom: 8, marginTop: 20 }}>
-        {/* Day labels */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 2.5, marginRight: 4, justifyContent: "flex-start" }}>
-          {["", "Mon", "", "Wed", "", "Fri", ""].map((day, i) => (
-            <div key={i} style={{
-              height: 11, width: 24, display: "flex", alignItems: "center",
-              fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
-              color: "var(--text-muted)", letterSpacing: "0.02em",
-            }}>
-              {day}
-            </div>
-          ))}
+      {/* Toggle buttons */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button style={{
+            fontSize: 10, padding: '3px 8px', borderRadius: 4,
+            background: 'rgba(255,255,255,0.1)', color: 'white',
+            border: 'none', fontWeight: 600, cursor: 'pointer',
+            textTransform: 'uppercase', letterSpacing: '0.04em',
+          }}>Solved</button>
+          <button style={{
+            fontSize: 10, padding: '3px 8px', borderRadius: 4,
+            background: 'none', color: '#6b7280', border: 'none',
+            fontWeight: 500, cursor: 'pointer',
+            textTransform: 'uppercase', letterSpacing: '0.04em',
+          }}>Submissions</button>
         </div>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: '#6b7280',
+        }}>
+          <span>D</span>
+          <div style={{ width: 1, height: 12, background: '#374151' }} />
+          <span>2026-5</span>
+        </div>
+      </div>
 
-        {/* Grid */}
-        {weeks.map((week, wi) => (
-          <div key={wi} style={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
-            {[0, 1, 2, 3, 4, 5, 6].map((dayIdx) => {
-              const day = week.find((d) => d.dayOfWeek === dayIdx);
-              return (
-                <div
-                  key={dayIdx}
-                  title={day ? `${day.date}: ${day.count} submission${day.count !== 1 ? "s" : ""}` : ""}
-                  style={{
-                    width: 11,
-                    height: 11,
-                    borderRadius: 2,
-                    background: day ? getColor(day.count) : "transparent",
-                    transition: "all 0.2s",
-                    cursor: day ? "pointer" : "default",
-                  }}
-                />
-              );
-            })}
+      {/* Bars */}
+      <div style={{ height: 80, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 4 }}>
+        {values.map((v, i) => (
+          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <div
+              style={{
+                width: '100%', borderRadius: '3px 3px 0 0',
+                background: 'rgba(16,185,129,0.7)',
+                height: `${(v / max) * 100}%`,
+                transition: 'height 0.6s ease',
+                cursor: 'pointer',
+              }}
+            />
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: '#4b5563' }}>{months[i]}</span>
           </div>
         ))}
       </div>
 
       {/* Legend */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 8, marginTop: 8,
-        justifyContent: "flex-end",
-      }}>
-        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "var(--text-muted)" }}>Less</span>
-        {[0, 1, 3, 5, 7].map((c) => (
-          <div key={c} style={{ width: 11, height: 11, borderRadius: 2, background: getColor(c) }} />
-        ))}
-        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "var(--text-muted)" }}>More</span>
-      </div>
-
-      {/* Active day stats */}
-      <div style={{ display: "flex", gap: 24, marginTop: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Flame size={14} color="#f59e0b" />
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: "var(--text-secondary)" }}>
-            {activeDays} active days
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Stats Ring (Donut) ─────────────────── */
-function StatsRing({ solved, total, easy, medium, hard }) {
-  const size = 160;
-  const stroke = 10;
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-
-  const easyPct = total > 0 ? easy / total : 0;
-  const mediumPct = total > 0 ? medium / total : 0;
-  const hardPct = total > 0 ? hard / total : 0;
-
-  const easyOffset = circumference * (1 - easyPct);
-  const mediumLen = circumference * mediumPct;
-  const hardLen = circumference * hardPct;
-
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
-      <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
-        <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
-          {/* Background track */}
-          <circle
-            cx={size / 2} cy={size / 2} r={radius}
-            fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={stroke}
-          />
-          {/* Easy arc */}
-          <circle
-            cx={size / 2} cy={size / 2} r={radius}
-            fill="none" stroke="var(--accent-green)" strokeWidth={stroke}
-            strokeDasharray={circumference}
-            strokeDashoffset={circumference * (1 - easyPct)}
-            strokeLinecap="round"
-            style={{ transition: "stroke-dashoffset 1s ease" }}
-          />
-          {/* Medium arc */}
-          <circle
-            cx={size / 2} cy={size / 2} r={radius}
-            fill="none" stroke="var(--accent-yellow)" strokeWidth={stroke}
-            strokeDasharray={`${mediumLen} ${circumference - mediumLen}`}
-            strokeDashoffset={-circumference * easyPct}
-            strokeLinecap="round"
-            style={{ transition: "stroke-dashoffset 1s ease" }}
-          />
-          {/* Hard arc */}
-          <circle
-            cx={size / 2} cy={size / 2} r={radius}
-            fill="none" stroke="var(--accent-red)" strokeWidth={stroke}
-            strokeDasharray={`${hardLen} ${circumference - hardLen}`}
-            strokeDashoffset={-circumference * (easyPct + mediumPct)}
-            strokeLinecap="round"
-            style={{ transition: "stroke-dashoffset 1s ease" }}
-          />
-        </svg>
-        {/* Center text */}
-        <div style={{
-          position: "absolute", inset: 0, display: "flex",
-          flexDirection: "column", alignItems: "center", justifyContent: "center",
-        }}>
-          <div style={{ fontSize: 32, fontWeight: 800, color: "white", letterSpacing: "-0.03em", lineHeight: 1 }}>
-            {solved}
-          </div>
-          <div style={{
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: 10, color: "var(--text-muted)", marginTop: 4,
-            letterSpacing: "0.06em",
-          }}>
-            SOLVED
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, flex: 1 }}>
+      <div style={{ display: 'flex', gap: 14, marginTop: 10 }}>
         {[
-          { label: "Easy", value: easy, color: "var(--accent-green)", bg: "rgba(16,185,129,0.1)", border: "rgba(16,185,129,0.2)" },
-          { label: "Medium", value: medium, color: "var(--accent-yellow)", bg: "rgba(245,158,11,0.1)", border: "rgba(245,158,11,0.2)" },
-          { label: "Hard", value: hard, color: "var(--accent-red)", bg: "rgba(239,68,68,0.1)", border: "rgba(239,68,68,0.2)" },
-        ].map((d) => (
-          <div key={d.label} style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "8px 14px", borderRadius: 10,
-            background: d.bg, border: `1px solid ${d.border}`,
+          { label: `Easy ${easy}`, color: '#10b981' },
+          { label: `Med. ${medium}`, color: '#f59e0b' },
+          { label: `Hard ${hard}`, color: '#ef4444' },
+        ].map(l => (
+          <div key={l.label} style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: l.color,
           }}>
-            <span style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 12, fontWeight: 600, color: d.color,
-              letterSpacing: "0.03em",
-            }}>
-              {d.label}
-            </span>
-            <span style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 14, fontWeight: 700, color: "white",
-            }}>
-              {d.value}
-            </span>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: l.color, display: 'inline-block' }} />
+            {l.label}
           </div>
         ))}
       </div>
@@ -279,51 +157,8 @@ function StatsRing({ solved, total, easy, medium, hard }) {
   );
 }
 
-/* ─── Category Breakdown ─────────────────── */
-function CategoryBreakdown({ byCategory = {} }) {
-  const categories = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
-  const max = categories.length > 0 ? categories[0][1] : 1;
-
-  if (categories.length === 0) {
-    return (
-      <div style={{ textAlign: "center", padding: "32px 16px", color: "var(--text-muted)", fontSize: 13 }}>
-        Solve problems to see your category breakdown.
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {categories.slice(0, 8).map(([cat, count]) => (
-        <div key={cat}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-            <span style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 500 }}>{cat}</span>
-            <span style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 11, color: "var(--text-muted)",
-            }}>
-              {count}
-            </span>
-          </div>
-          <div style={{
-            height: 6, borderRadius: 3, background: "rgba(255,255,255,0.06)",
-            overflow: "hidden",
-          }}>
-            <div style={{
-              height: "100%", borderRadius: 3,
-              background: "var(--gradient-brand)",
-              width: `${(count / max) * 100}%`,
-              transition: "width 1s ease",
-            }} />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* ─── Practice History ─────────────────── */
-function PracticeHistory() {
+/* ─── Practice History Table ─────────────────── */
+function PracticeHistoryTable() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const { data, isLoading } = useUserHistory(page);
@@ -331,133 +166,144 @@ function PracticeHistory() {
   const submissions = data?.submissions || [];
   const totalPages = data?.totalPages || 1;
 
-  const getStatusStyle = (status) => {
-    if (status === "Accepted") return { color: "var(--accent-green)", bg: "rgba(16,185,129,0.08)", border: "rgba(16,185,129,0.15)" };
-    if (status === "Wrong Answer") return { color: "var(--accent-red)", bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.15)" };
-    return { color: "var(--accent-yellow)", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.15)" };
+  if (isLoading) return (
+    <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
+      <Loader2 size={28} className="animate-spin" color="var(--accent-violet)" />
+    </div>
+  );
+
+  if (submissions.length === 0) return (
+    <div style={{ textAlign: 'center', padding: '48px 16px', color: '#4b5563', fontSize: 13 }}>
+      No submissions yet. Start solving problems!
+    </div>
+  );
+
+  const getDiffColor = (d) => {
+    if (d === 'Easy') return '#10b981';
+    if (d === 'Medium') return '#f59e0b';
+    return '#ef4444';
   };
 
   return (
-    <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-        <Clock size={16} color="var(--accent-violet)" />
-        <h3 style={{ fontWeight: 700, fontSize: 16, letterSpacing: "-0.01em" }}>Practice History</h3>
-      </div>
-
-      {isLoading ? (
-        <div style={{ display: "flex", justifyContent: "center", padding: 48 }}>
-          <Loader2 size={24} className="animate-spin" color="var(--accent-violet)" />
-        </div>
-      ) : submissions.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "40px 16px", color: "var(--text-muted)", fontSize: 13 }}>
-          No submissions yet. Start solving problems!
-        </div>
-      ) : (
-        <>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {submissions.map((sub, i) => {
-              const ss = getStatusStyle(sub.status);
-              const problem = sub.problemId;
-              return (
-                <motion.div
-                  key={sub._id}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.03, duration: 0.3 }}
-                  onClick={() => problem?.slug && navigate(`/problem/${problem.slug}`)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 14,
-                    padding: "12px 16px", borderRadius: 12,
-                    background: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.05)",
-                    cursor: "pointer", transition: "all 0.2s",
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.02)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.05)"; }}
-                >
-                  {sub.status === "Accepted" ? (
-                    <CheckCircle2 size={16} color="var(--accent-green)" />
-                  ) : (
-                    <div style={{ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${ss.color}`, flexShrink: 0 }} />
-                  )}
-
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "-0.01em" }}>
-                      {problem?.title || "Unknown Problem"}
-                    </div>
-                    <div style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: 10, color: "var(--text-muted)", marginTop: 2,
-                      letterSpacing: "0.02em",
-                    }}>
-                      {sub.createdAt && formatDistanceToNow(new Date(sub.createdAt), { addSuffix: true })}
-                    </div>
-                  </div>
-
-                  <span style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 11, fontWeight: 600, padding: "4px 10px",
-                    borderRadius: 8, background: ss.bg, color: ss.color,
-                    border: `1px solid ${ss.border}`, letterSpacing: "0.02em",
-                  }}>
-                    {sub.status}
-                  </span>
-
-                  <span style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 11, color: "var(--text-muted)", minWidth: 36, textAlign: "right",
-                  }}>
-                    {sub.language?.slice(0, 2).toUpperCase()}
-                  </span>
-                </motion.div>
-              );
-            })}
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 12, marginTop: 20 }}>
-              <button
-                className="btn btn-sm btn-secondary"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                <ChevronLeft size={14} />
-              </button>
-              <span style={{
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            {['Last Submitted', 'Problem', 'Last Result', 'Submissions'].map(h => (
+              <th key={h} style={{
+                padding: '12px 16px',
                 fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 12, color: "var(--text-muted)",
+                fontSize: 11, fontWeight: 600, color: '#6b7280',
+                textTransform: 'uppercase', letterSpacing: '0.06em',
+              }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {submissions.map((sub) => (
+            <tr
+              key={sub._id}
+              onClick={() => sub.problemId?.slug && navigate(`/problem/${sub.problemId.slug}`)}
+              style={{
+                borderBottom: '1px solid rgba(255,255,255,0.04)',
+                cursor: 'pointer', transition: 'background 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <td style={{
+                padding: '14px 16px',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 12, color: '#9ca3af',
               }}>
-                {page} / {totalPages}
-              </span>
-              <button
-                className="btn btn-sm btn-secondary"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          )}
-        </>
+                {sub.createdAt && formatDistanceToNow(new Date(sub.createdAt), { addSuffix: true })}
+              </td>
+              <td style={{ padding: '14px 16px' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {sub.status === 'Accepted' && <CheckCircle2 size={14} color="#10b981" />}
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'white' }}>
+                      {sub.problemId?.title || "Untitled"}
+                    </span>
+                  </div>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700,
+                    color: getDiffColor(sub.problemId?.difficulty),
+                    textTransform: 'uppercase', marginTop: 2, display: 'inline-block',
+                  }}>
+                    {sub.problemId?.difficulty}
+                  </span>
+                </div>
+              </td>
+              <td style={{ padding: '14px 16px' }}>
+                <span style={{
+                  fontSize: 12, fontWeight: 500,
+                  color: sub.status === 'Accepted' ? 'white' : '#f59e0b',
+                }}>
+                  {sub.status}
+                </span>
+              </td>
+              <td style={{ padding: '14px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 12, color: '#9ca3af',
+                  }}>1</span>
+                  <MoreVertical size={14} color="#374151" />
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, padding: '16px 0' }}>
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            style={{
+              padding: 6, borderRadius: 6, background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)', cursor: page <= 1 ? 'not-allowed' : 'pointer',
+              opacity: page <= 1 ? 0.3 : 1, color: 'white', display: 'flex',
+            }}
+          >
+            <ChevronLeft size={14} />
+          </button>
+          <span style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 12, color: 'white', padding: '4px 10px',
+            background: 'rgba(255,255,255,0.08)', borderRadius: 4,
+          }}>{page}</span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            style={{
+              padding: 6, borderRadius: 6, background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)', cursor: page >= totalPages ? 'not-allowed' : 'pointer',
+              opacity: page >= totalPages ? 0.3 : 1, color: 'white', display: 'flex',
+            }}
+          >
+            <ChevronRight size={14} />
+          </button>
+        </div>
       )}
     </div>
   );
 }
 
 /* ─── Main Dashboard Page ─────────────────── */
-function DashboardPage() {
+export default function DashboardPage() {
   const { user } = useAuth();
   const { data: statsData, isLoading: statsLoading } = useUserStats();
-  const { data: activityData, isLoading: activityLoading } = useUserActivity();
-
   const stats = statsData || {};
 
   if (statsLoading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#050505" }}>
+      <div style={{ minHeight: '100vh', background: '#050505' }}>
         <Navbar />
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "60vh" }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
           <Loader2 size={28} className="animate-spin" color="var(--accent-violet)" />
         </div>
       </div>
@@ -465,108 +311,136 @@ function DashboardPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#050505" }}>
+    <div style={{ minHeight: '100vh', background: '#050505', color: '#f0f0f0' }}>
       <Navbar />
 
-      {/* ─── Header ─────────────────────────────────────── */}
-      <div className="mesh-gradient" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "48px 0 40px" }}>
-        <div className="page-container" style={{ padding: "0 clamp(20px, 4vw, 48px)" }}>
-          <motion.div {...fadeUp(0)}>
-            <span className="mono-label" style={{ marginBottom: 10, display: "block" }}>YOUR PROGRESS</span>
-            <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 8, letterSpacing: "-0.03em", color: "white" }}>
-              Dashboard
-            </h1>
-            <p style={{ color: "var(--text-muted)", fontSize: 15 }}>
-              Track your coding progress, submissions, and problem-solving journey.
-            </p>
-          </motion.div>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px clamp(16px, 4vw, 48px)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 32, alignItems: 'start' }}>
 
-          {/* Quick Stats Row */}
-          <motion.div {...fadeUp(0.2)} style={{ display: "flex", gap: 16, marginTop: 32, flexWrap: "wrap" }}>
-            {[
-              { label: "TOTAL SOLVED", value: stats.totalSolved || 0, icon: <Target size={14} />, color: "#10b981" },
-              { label: "SUBMISSIONS", value: stats.totalSubmissions || 0, icon: <BarChart3 size={14} />, color: "#818cf8" },
-              { label: "ACCEPTANCE", value: `${stats.acceptanceRate || 0}%`, icon: <TrendingUp size={14} />, color: "#f59e0b" },
-            ].map((stat, i) => (
-              <div key={i} className="hover-glow" style={{
-                display: "flex", alignItems: "center", gap: 14,
-                background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)",
-                borderRadius: 14, padding: "14px 20px", transition: "all 0.25s",
+          {/* ─── Left Column: Practice History ─── */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h2 style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', color: 'white' }}>
+                Practice History
+              </h2>
+              <button style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                fontSize: 12, fontWeight: 500, padding: '6px 12px',
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: 8, color: '#9ca3af', cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}>
+                <Filter size={13} /> Filter
+              </button>
+            </div>
+
+            <motion.div {...fadeUp(0.1)} style={{
+              background: '#111111', borderRadius: 16,
+              border: '1px solid rgba(255,255,255,0.05)',
+              overflow: 'hidden',
+            }}>
+              <PracticeHistoryTable />
+            </motion.div>
+          </div>
+
+          {/* ─── Right Column: Summary Sidebar ─── */}
+          <div>
+            <h2 style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', color: 'white', marginBottom: 16 }}>
+              Summary
+            </h2>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+              {/* Total Solved */}
+              <motion.div {...fadeUp(0.15)} style={{
+                background: '#111111', borderRadius: 16,
+                border: '1px solid rgba(255,255,255,0.05)', padding: 20,
               }}>
                 <div style={{
-                  width: 36, height: 36, borderRadius: 10,
-                  background: `${stat.color}12`, border: `1px solid ${stat.color}25`,
-                  display: "flex", alignItems: "center", justifyContent: "center", color: stat.color,
-                }}>
-                  {stat.icon}
-                </div>
-                <div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: "white", letterSpacing: "-0.02em" }}>{stat.value}</div>
+                  fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700,
+                  color: '#6b7280', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6,
+                }}>Total Solved</div>
+
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 14 }}>
+                  <span style={{ fontSize: 24, fontWeight: 800, color: '#38bdf8' }}>{stats.totalSolved || 0}</span>
+                  <span style={{ fontSize: 12, color: '#6b7280' }}>Problems</span>
                   <div style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 10, color: "var(--text-muted)", letterSpacing: "0.08em",
+                    marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4,
+                    fontSize: 10, fontWeight: 700, color: '#9ca3af',
+                    background: 'rgba(255,255,255,0.04)', padding: '3px 8px',
+                    borderRadius: 99, border: '1px solid rgba(255,255,255,0.06)',
                   }}>
-                    {stat.label}
+                    <TrendingUp size={10} color="#10b981" /> Beats 1%
                   </div>
                 </div>
-              </div>
-            ))}
-          </motion.div>
-        </div>
-      </div>
 
-      {/* ─── Main Content ────────────────────────────────────── */}
-      <div className="page-container">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 24, alignItems: "start" }}>
-          {/* Left Column */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-            {/* Activity Heatmap */}
-            <motion.div {...fadeUp(0.25)} className="card" style={{ padding: 24 }}>
-              {activityLoading ? (
-                <div style={{ display: "flex", justifyContent: "center", padding: 32 }}>
-                  <Loader2 size={20} className="animate-spin" color="var(--accent-violet)" />
+                {/* Difficulty badges */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  {[
+                    { label: 'Easy', val: stats.byDifficulty?.Easy || 0, color: '#10b981', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.15)' },
+                    { label: 'Med.', val: stats.byDifficulty?.Medium || 0, color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.15)' },
+                    { label: 'Hard', val: stats.byDifficulty?.Hard || 0, color: '#ef4444', bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.15)' },
+                  ].map(d => (
+                    <div key={d.label} style={{
+                      background: d.bg, border: `1px solid ${d.border}`,
+                      borderRadius: 8, padding: '6px 0', textAlign: 'center',
+                    }}>
+                      <div style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: 9, fontWeight: 700, color: d.color, opacity: 0.8,
+                        textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 2,
+                      }}>{d.label}</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: d.color }}>{d.val}</div>
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <ActivityHeatmap activityMap={activityData?.activity || {}} />
-              )}
-            </motion.div>
+              </motion.div>
 
-            {/* Practice History */}
-            <motion.div {...fadeUp(0.35)} className="card" style={{ padding: 24 }}>
-              <PracticeHistory />
-            </motion.div>
+              {/* Submissions & Acceptance row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <motion.div {...fadeUp(0.2)} style={{
+                  background: '#111111', borderRadius: 16,
+                  border: '1px solid rgba(255,255,255,0.05)', padding: 20,
+                }}>
+                  <div style={{
+                    fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700,
+                    color: '#6b7280', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6,
+                  }}>Submissions</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: '#818cf8' }}>{stats.totalSubmissions || 0}</div>
+                </motion.div>
+
+                <motion.div {...fadeUp(0.25)} style={{
+                  background: '#111111', borderRadius: 16,
+                  border: '1px solid rgba(255,255,255,0.05)', padding: 20,
+                }}>
+                  <div style={{
+                    fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700,
+                    color: '#6b7280', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6,
+                  }}>Acceptance</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: '#10b981' }}>{stats.acceptanceRate || 0}%</div>
+                </motion.div>
+              </div>
+
+              {/* Topics Chart */}
+              <motion.div {...fadeUp(0.3)} style={{
+                background: '#111111', borderRadius: 16,
+                border: '1px solid rgba(255,255,255,0.05)', padding: 16,
+              }}>
+                <TopicChart byCategory={stats.byCategory} />
+              </motion.div>
+
+              {/* Activity Bar Chart */}
+              <motion.div {...fadeUp(0.35)} style={{
+                background: '#111111', borderRadius: 16,
+                border: '1px solid rgba(255,255,255,0.05)', padding: 20,
+              }}>
+                <ActivityChart stats={stats} />
+              </motion.div>
+            </div>
           </div>
 
-          {/* Right Column */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-            {/* Solved Stats Ring */}
-            <motion.div {...fadeUp(0.3)} className="card" style={{ padding: 24 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-                <CheckCircle2 size={16} color="var(--accent-violet)" />
-                <h3 style={{ fontWeight: 700, fontSize: 16, letterSpacing: "-0.01em" }}>Total Solved</h3>
-              </div>
-              <StatsRing
-                solved={stats.totalSolved || 0}
-                total={stats.totalProblems || 0}
-                easy={stats.byDifficulty?.Easy || 0}
-                medium={stats.byDifficulty?.Medium || 0}
-                hard={stats.byDifficulty?.Hard || 0}
-              />
-            </motion.div>
-
-            {/* Category Breakdown */}
-            <motion.div {...fadeUp(0.4)} className="card" style={{ padding: 24 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                <BarChart3 size={16} color="var(--accent-violet)" />
-                <h3 style={{ fontWeight: 700, fontSize: 16, letterSpacing: "-0.01em" }}>Categories</h3>
-              </div>
-              <CategoryBreakdown byCategory={stats.byCategory} />
-            </motion.div>
-          </div>
         </div>
       </div>
     </div>
   );
 }
-
-export default DashboardPage;

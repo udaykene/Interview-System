@@ -2,6 +2,7 @@ import express from "express";
 import { protectRoutes } from "../middleware/auth.js";
 import {
   listPlaylists,
+  getPlaylist,
   createPlaylist,
   updatePlaylist,
   deletePlaylist,
@@ -12,6 +13,7 @@ import {
 const router = express.Router();
 
 router.get("/", protectRoutes, listPlaylists);
+router.get("/:id", protectRoutes, getPlaylist);
 router.post("/", protectRoutes, createPlaylist);
 router.put("/:id", protectRoutes, updatePlaylist);
 router.delete("/:id", protectRoutes, deletePlaylist);

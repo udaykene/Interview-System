@@ -8,10 +8,29 @@ export async function listPlaylists(req, res) {
   try {
     const playlists = await Playlist.find({ userId: req.user._id })
       .sort({ updatedAt: -1 })
-      .populate("problems", "title slug difficulty category tags");
+      .populate("problems", "title slug difficulty category tags acceptanceRate");
     res.status(200).json({ playlists });
   } catch (error) {
     console.error("Error in listPlaylists:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+/**
+ * GET /api/playlists/:id
+ * Get a single playlist by ID.
+ */
+export async function getPlaylist(req, res) {
+  try {
+    const { id } = req.params;
+    const playlist = await Playlist.findOne({ _id: id, userId: req.user._id })
+      .populate("problems", "title slug difficulty category tags acceptanceRate");
+    
+    if (!playlist) return res.status(404).json({ message: "Playlist not found" });
+    
+    res.status(200).json({ playlist });
+  } catch (error) {
+    console.error("Error in getPlaylist:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 }

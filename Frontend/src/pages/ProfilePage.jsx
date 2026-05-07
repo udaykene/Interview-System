@@ -1,13 +1,15 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useAuth } from "../context/AuthContextState";
 import Navbar from "../components/Navbar";
 import { motion } from "framer-motion";
 import {
-  Camera, Edit3, Check, X, Github, Linkedin, Twitter, Globe,
-  Code2, Users, Trophy
+  Camera, Check, X,
+  MapPin, Eye, MessageSquare, Award, Star, Info, ChevronDown
 } from "lucide-react";
 import axiosInstance from "../lib/axios";
 import toast from "react-hot-toast";
+import { useUserStats, useUserActivity, useUserHistory } from "../hooks/useStats";
+import ProgressGauge from "../components/ProgressGauge";
 
 const fadeUp = (delay = 0) => ({
   initial: { opacity: 0, y: 16 },
@@ -15,11 +17,133 @@ const fadeUp = (delay = 0) => ({
   transition: { delay, duration: 0.5, ease: [0.16, 1, 0.3, 1] }
 });
 
+/* ─── Activity Heatmap & Streaks ─────────────────── */
+function ProfileActivity({ activityMap = {} }) {
+  const weeks = useMemo(() => {
+    const today = new Date();
+    const result = [];
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - 363);
+    startDate.setDate(startDate.getDate() - startDate.getDay());
+
+    let currentDate = new Date(startDate);
+    let week = [];
+
+    while (currentDate <= today) {
+      const dateStr = currentDate.toISOString().split("T")[0];
+      week.push({
+        date: dateStr,
+        count: activityMap[dateStr] || 0,
+        dayOfWeek: currentDate.getDay(),
+      });
+
+      if (currentDate.getDay() === 6) {
+        result.push(week);
+        week = [];
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    if (week.length > 0) result.push(week);
+    return result;
+  }, [activityMap]);
+
+  const getColor = (count) => {
+    if (count === 0) return "rgba(255,255,255,0.03)";
+    if (count <= 1) return "#0e4429";
+    if (count <= 3) return "#006d32";
+    if (count <= 5) return "#26a641";
+    return "#39d353";
+  };
+
+  const totalSubmissions = Object.values(activityMap).reduce((s, c) => s + c, 0);
+  const activeDays = Object.values(activityMap).filter((c) => c > 0).length;
+
+  return (
+    <div style={{
+      background: '#111111',
+      borderRadius: 16,
+      border: '1px solid rgba(255,255,255,0.05)',
+      padding: '20px 24px',
+    }}>
+      {/* Header row */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 20,
+        flexWrap: 'wrap',
+        gap: 12,
+      }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}>
+          {totalSubmissions} submissions in the past one year
+          <Info size={12} style={{ display: 'inline', color: '#4b5563', marginLeft: 6, verticalAlign: 'middle' }} />
+        </h3>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 16,
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 11,
+          color: '#6b7280',
+        }}>
+          <span>Total active days: <span style={{ color: 'white', fontWeight: 700 }}>{activeDays}</span></span>
+          <span>Max streak: <span style={{ color: 'white', fontWeight: 700 }}>3</span></span>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+            background: 'rgba(255,255,255,0.05)',
+            padding: '3px 8px',
+            borderRadius: 6,
+            border: '1px solid rgba(255,255,255,0.05)',
+            cursor: 'pointer',
+          }}>
+            Current <ChevronDown size={12} />
+          </div>
+        </div>
+      </div>
+
+      {/* Heatmap grid */}
+      <div style={{ display: 'flex', gap: 2, overflowX: 'auto', paddingBottom: 4 }}>
+        {weeks.map((week, wi) => (
+          <div key={wi} style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
+            {[0, 1, 2, 3, 4, 5, 6].map((dayIdx) => {
+              const day = week.find((d) => d.dayOfWeek === dayIdx);
+              return (
+                <div
+                  key={dayIdx}
+                  title={day ? `${day.date}: ${day.count} submission${day.count !== 1 ? "s" : ""}` : ""}
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 2,
+                    background: day ? getColor(day.count) : "transparent",
+                    transition: 'all 0.2s',
+                    cursor: day ? 'pointer' : 'default',
+                  }}
+                />
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ProfilePage() {
   const { user, refresh } = useAuth();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("Recent AC");
   const fileRef = useRef();
+
+  const { data: statsData } = useUserStats();
+  const { data: activityData } = useUserActivity();
+  const { data: historyData } = useUserHistory(1, 10);
+
+  const stats = statsData || {};
+  const submissions = historyData?.submissions || [];
 
   const [form, setForm] = useState({
     name: user?.name || "",
@@ -57,44 +181,31 @@ function ProfilePage() {
     }
   };
 
-  const stats = [
-    { label: "SESSIONS", value: user?.stats?.sessionCount || 0, icon: <Users size={18} />, color: '#818cf8' },
-    { label: "SOLVED", value: user?.stats?.problemsSolved || 0, icon: <Trophy size={18} />, color: '#10b981' },
-    { label: "PROVIDER", value: (user?.provider || 'local').toUpperCase(), icon: <Code2 size={18} />, color: '#f59e0b' },
-  ];
+  const tabs = ["Recent AC", "List", "Solutions", "Discuss"];
 
   return (
-    <div style={{ minHeight: '100vh', background: '#050505' }}>
+    <div style={{ minHeight: '100vh', background: '#050505', color: '#f0f0f0' }}>
       <Navbar />
-      <div style={{ maxWidth: 760, margin: '0 auto', padding: '40px clamp(20px, 4vw, 48px)' }}>
 
-        {/* Profile Card */}
-        <motion.div {...fadeUp(0)} className="card" style={{ marginBottom: 24, overflow: 'hidden', padding: 0 }}>
-          {/* Cover */}
-          <div style={{
-            height: 110,
-            background: 'linear-gradient(135deg, rgba(124,91,240,0.2) 0%, rgba(129,140,248,0.1) 50%, rgba(124,91,240,0.15) 100%)',
-            position: 'relative',
-          }}>
-            <div style={{
-              position: 'absolute', inset: 0,
-              background: 'radial-gradient(ellipse at 30% 50%, rgba(124,91,240,0.15) 0%, transparent 60%)',
-            }} />
-          </div>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '40px clamp(16px, 4vw, 48px)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 40 }}>
 
-          <div style={{ padding: '0 28px 28px' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20, marginTop: -36 }}>
+          {/* ─── Sidebar ─────────────────────────────── */}
+          <aside>
+            <motion.div {...fadeUp(0)} style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               {/* Avatar */}
-              <div style={{ position: 'relative', flexShrink: 0 }}>
+              <div style={{ position: 'relative', width: 'fit-content', marginBottom: 16 }}>
                 {form.profileImage ? (
-                  <img src={form.profileImage} alt={form.name}
-                    style={{ width: 80, height: 80, borderRadius: '50%', border: '3px solid #111111', objectFit: 'cover' }} />
+                  <img src={form.profileImage} alt={form.name} style={{
+                    width: 100, height: 100, borderRadius: 16, objectFit: 'cover',
+                    border: '2px solid rgba(255,255,255,0.08)',
+                  }} />
                 ) : (
                   <div style={{
-                    width: 80, height: 80, borderRadius: '50%', border: '3px solid #111111',
-                    background: 'var(--gradient-brand)',
+                    width: 100, height: 100, borderRadius: 16,
+                    background: 'linear-gradient(135deg, #7c5bf0, #818cf8)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 28, fontWeight: 700, color: 'white'
+                    fontSize: 36, fontWeight: 800, color: 'white',
                   }}>
                     {user?.name?.[0]?.toUpperCase()}
                   </div>
@@ -102,10 +213,11 @@ function ProfilePage() {
                 {editing && (
                   <>
                     <button onClick={() => fileRef.current?.click()} style={{
-                      position: 'absolute', bottom: 0, right: 0,
+                      position: 'absolute', bottom: -4, right: -4,
                       width: 28, height: 28, borderRadius: '50%',
-                      background: 'var(--gradient-brand)', border: '2px solid #111111',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                      background: '#818cf8', border: '2px solid #050505',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer',
                     }}>
                       <Camera size={12} color="white" />
                     </button>
@@ -114,137 +226,219 @@ function ProfilePage() {
                 )}
               </div>
 
-              {/* Name + username */}
-              <div style={{ flex: 1, paddingTop: 40 }}>
-                {editing ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <input className="input" placeholder="Full name" value={form.name}
-                      onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                      style={{ fontSize: 18, fontWeight: 700, padding: '8px 12px' }} />
-                    <input className="input" placeholder="username" value={form.username}
-                      onChange={e => setForm(f => ({ ...f, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') }))}
-                      style={{ padding: '8px 12px', fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: 'var(--text-muted)' }} />
-                  </div>
-                ) : (
-                  <>
-                    <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4, letterSpacing: '-0.02em' }}>{user?.name}</h1>
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--text-muted)', fontSize: 13, letterSpacing: '0.02em' }}>
-                      @{user?.username || user?.email?.split('@')[0]}
-                    </span>
-                  </>
-                )}
+              {/* Name & Username */}
+              <h1 style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 2 }}>{user?.name}</h1>
+              <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: '#6b7280', marginBottom: 12 }}>
+                @{user?.username || user?.email?.split('@')[0]}
+              </p>
+
+              {/* Rank */}
+              <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 8 }}>
+                Rank <span style={{ color: 'white', fontWeight: 700, fontFamily: "'JetBrains Mono', monospace" }}>~5,000,000</span>
+              </p>
+
+              {/* Following / Followers */}
+              <div style={{ display: 'flex', gap: 16, fontSize: 12, marginBottom: 16 }}>
+                <span><strong style={{ color: 'white' }}>0</strong> <span style={{ color: '#6b7280' }}>Following</span></span>
+                <span><strong style={{ color: 'white' }}>0</strong> <span style={{ color: '#6b7280' }}>Followers</span></span>
               </div>
 
-              {/* Edit/Save */}
-              <div style={{ paddingTop: 40, display: 'flex', gap: 8, flexShrink: 0 }}>
-                {editing ? (
-                  <>
-                    <button className="btn btn-sm btn-ghost" onClick={() => setEditing(false)}><X size={13} />Cancel</button>
-                    <button className="btn btn-sm btn-primary" onClick={handleSave} disabled={saving}>
-                      {saving ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <Check size={13} />}Save
-                    </button>
-                  </>
-                ) : (
-                  <button className="btn btn-sm btn-secondary" onClick={() => setEditing(true)}><Edit3 size={13} />Edit</button>
-                )}
-              </div>
-            </div>
-
-            {/* Bio */}
-            <div style={{ marginTop: 24 }}>
-              {editing ? (
-                <textarea className="input" placeholder="Write a short bio..." value={form.bio}
-                  onChange={e => setForm(f => ({ ...f, bio: e.target.value }))}
-                  rows={3} style={{ resize: 'vertical' }} maxLength={300} />
-              ) : user?.bio ? (
-                <p style={{ color: 'var(--text-secondary)', lineHeight: 1.7, fontSize: 14 }}>{user.bio}</p>
+              {/* Edit Profile button */}
+              {!editing ? (
+                <button onClick={() => setEditing(true)} style={{
+                  width: '100%', padding: '8px 0', borderRadius: 8,
+                  background: 'rgba(16,185,129,0.1)', color: '#10b981',
+                  border: '1px solid rgba(16,185,129,0.2)',
+                  fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                  transition: 'all 0.2s', marginBottom: 16,
+                }}>
+                  Edit Profile
+                </button>
               ) : (
-                <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontSize: 13 }}>No bio yet.</p>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                  <button onClick={() => setEditing(false)} className="btn btn-sm btn-ghost" style={{ flex: 1 }}><X size={13} />Cancel</button>
+                  <button onClick={handleSave} disabled={saving} className="btn btn-sm btn-primary" style={{ flex: 1 }}>
+                    {saving ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <Check size={13} />}Save
+                  </button>
+                </div>
               )}
-            </div>
 
-            {/* Social Links */}
-            {editing ? (
-              <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              {/* Location */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#6b7280', marginBottom: 24 }}>
+                <MapPin size={14} /> India
+              </div>
+
+              {/* Divider */}
+              <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', marginBottom: 24 }} />
+
+              {/* Community Stats */}
+              <h3 style={{
+                fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700,
+                color: '#6b7280', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 16,
+              }}>Community Stats</h3>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 24 }}>
                 {[
-                  { key: 'github', icon: <Github size={13} />, placeholder: 'github.com/username' },
-                  { key: 'linkedin', icon: <Linkedin size={13} />, placeholder: 'linkedin.com/in/username' },
-                  { key: 'twitter', icon: <Twitter size={13} />, placeholder: 'twitter.com/username' },
-                  { key: 'website', icon: <Globe size={13} />, placeholder: 'yourwebsite.com' },
-                ].map(({ key, icon, placeholder }) => (
-                  <div key={key} style={{ position: 'relative' }}>
-                    <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}>{icon}</div>
-                    <input className="input" placeholder={placeholder} value={form.socialLinks[key]}
-                      onChange={e => setForm(f => ({ ...f, socialLinks: { ...f.socialLinks, [key]: e.target.value } }))}
-                      style={{ paddingLeft: 34, fontSize: 13 }} />
+                  { icon: <Eye size={14} />, label: 'Views', color: '#38bdf8' },
+                  { icon: <Award size={14} />, label: 'Solution', color: '#10b981' },
+                  { icon: <MessageSquare size={14} />, label: 'Discuss', color: '#f59e0b' },
+                  { icon: <Star size={14} />, label: 'Reputation', color: '#818cf8' },
+                ].map(({ icon, label, color }) => (
+                  <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#9ca3af' }}>
+                      <span style={{ color }}>{icon}</span> {label}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>0</div>
+                      <div style={{ fontSize: 10, color: '#4b5563' }}>Last week 0</div>
+                    </div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div style={{ display: 'flex', gap: 10, marginTop: 16, flexWrap: 'wrap' }}>
-                {user?.socialLinks?.github && <SocialLink icon={<Github size={13} />} href={user.socialLinks.github}>GitHub</SocialLink>}
-                {user?.socialLinks?.linkedin && <SocialLink icon={<Linkedin size={13} />} href={user.socialLinks.linkedin}>LinkedIn</SocialLink>}
-                {user?.socialLinks?.twitter && <SocialLink icon={<Twitter size={13} />} href={user.socialLinks.twitter}>Twitter</SocialLink>}
-                {user?.socialLinks?.website && <SocialLink icon={<Globe size={13} />} href={user.socialLinks.website}>Website</SocialLink>}
+
+              {/* Divider */}
+              <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', marginBottom: 24 }} />
+
+              {/* Languages */}
+              <h3 style={{
+                fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700,
+                color: '#6b7280', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 12,
+              }}>Languages</h3>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{
+                  padding: '4px 10px', borderRadius: 6, fontSize: 11,
+                  background: 'rgba(255,255,255,0.05)', color: '#9ca3af', fontWeight: 500,
+                }}>Java</span>
+                <span style={{ fontSize: 11, color: '#4b5563' }}>3 problems solved</span>
               </div>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
-          {stats.map((s, i) => (
-            <motion.div key={i} {...fadeUp(0.1 + i * 0.08)} className="card hover-glow" style={{ textAlign: 'center', padding: 28 }}>
-              <div style={{
-                width: 44, height: 44, borderRadius: 12, margin: '0 auto 14px',
-                background: `${s.color}10`, border: `1px solid ${s.color}20`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', color: s.color
-              }}>{s.icon}</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: 'white', marginBottom: 4, letterSpacing: '-0.02em' }}>{s.value}</div>
-              <div className="mono-label">{s.label}</div>
             </motion.div>
-          ))}
+          </aside>
+
+          {/* ─── Main Content ────────────────────────── */}
+          <main style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+            {/* Top Row: Gauge & Badges */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+              <motion.div {...fadeUp(0.1)}>
+                <ProgressGauge
+                  solved={stats.totalSolved || 0}
+                  total={stats.totalProblems || 0}
+                  easy={stats.byDifficulty?.Easy || 0}
+                  medium={stats.byDifficulty?.Medium || 0}
+                  hard={stats.byDifficulty?.Hard || 0}
+                  totalEasy={stats.totalByDifficulty?.Easy || 0}
+                  totalMedium={stats.totalByDifficulty?.Medium || 0}
+                  totalHard={stats.totalByDifficulty?.Hard || 0}
+                />
+              </motion.div>
+
+              <motion.div {...fadeUp(0.2)} style={{
+                background: '#111111', borderRadius: 16,
+                border: '1px solid rgba(255,255,255,0.05)',
+                padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+              }}>
+                <div>
+                  <div style={{
+                    fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700,
+                    color: '#6b7280', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 4,
+                  }}>Badges</div>
+                  <div style={{ fontSize: 36, fontWeight: 800, color: 'white' }}>0</div>
+                </div>
+
+                <div style={{ marginTop: 'auto' }}>
+                  <div style={{
+                    fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700,
+                    color: '#6b7280', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 10,
+                  }}>Locked Badge</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+                    <div style={{
+                      width: 44, height: 44, borderRadius: '50%',
+                      background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.5,
+                    }}>
+                      <Award size={18} color="#4b5563" />
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#6b7280' }}>May LeetCoding Challenge</span>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Heatmap Section */}
+            <motion.div {...fadeUp(0.3)}>
+              <ProfileActivity activityMap={activityData?.activity || {}} />
+            </motion.div>
+
+            {/* Recent Activity Tabs */}
+            <motion.div {...fadeUp(0.4)} style={{
+              background: '#111111', borderRadius: 16,
+              border: '1px solid rgba(255,255,255,0.05)',
+              overflow: 'hidden',
+            }}>
+              {/* Tab bar */}
+              <div style={{
+                display: 'flex', alignItems: 'center',
+                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                padding: '0 20px',
+              }}>
+                {tabs.map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    style={{
+                      padding: '14px 16px',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: activeTab === tab ? 'white' : '#6b7280',
+                      background: 'none',
+                      border: 'none',
+                      borderBottom: activeTab === tab ? '2px solid #818cf8' : '2px solid transparent',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    {tab}
+                  </button>
+                ))}
+                <span style={{
+                  marginLeft: 'auto', fontSize: 11, color: '#4b5563',
+                  cursor: 'pointer', fontWeight: 500,
+                }}>
+                  View all submissions ›
+                </span>
+              </div>
+
+              {/* Submission list */}
+              <div>
+                {submissions.length > 0 ? submissions.map((sub) => (
+                  <div key={sub._id} style={{
+                    padding: '14px 20px',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    borderBottom: '1px solid rgba(255,255,255,0.03)',
+                    cursor: 'pointer', transition: 'background 0.2s',
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.9)' }}>
+                      {sub.problemId?.title}
+                    </span>
+                    <span style={{ fontSize: 11, color: '#4b5563', fontFamily: "'JetBrains Mono', monospace" }}>
+                      {sub.createdAt && new Date(sub.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                )) : (
+                  <div style={{ padding: '40px 20px', textAlign: 'center', fontSize: 13, color: '#4b5563', fontStyle: 'italic' }}>
+                    No activity yet.
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
+          </main>
         </div>
-
-        {/* Account Info */}
-        <motion.div {...fadeUp(0.35)} className="card">
-          <span className="mono-label" style={{ marginBottom: 16, display: 'block' }}>ACCOUNT</span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            <InfoRow label="Email" value={user?.email} />
-            <InfoRow label="Login Method" value={user?.provider?.charAt(0).toUpperCase() + user?.provider?.slice(1)} />
-            <InfoRow label="Role" value={user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)} />
-            <InfoRow label="Email Verified" value={user?.emailVerified ? "✅ Verified" : "❌ Not verified"} />
-            <InfoRow label="Member Since" value={user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : "—"} last />
-          </div>
-        </motion.div>
       </div>
-    </div>
-  );
-}
-
-function SocialLink({ icon, href, children }) {
-  const fullUrl = href.startsWith('http') ? href : `https://${href}`;
-  return (
-    <a href={fullUrl} target="_blank" rel="noopener noreferrer" style={{
-      display: 'inline-flex', alignItems: 'center', gap: 7,
-      padding: '6px 14px', borderRadius: 99, fontSize: 12,
-      fontFamily: "'JetBrains Mono', monospace",
-      background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
-      color: 'var(--text-secondary)', textDecoration: 'none', transition: 'all 0.2s', letterSpacing: '0.02em'
-    }}
-      onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(124,91,240,0.3)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-    >
-      {icon}{children}
-    </a>
-  );
-}
-
-function InfoRow({ label, value, last }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: last ? 'none' : '1px solid rgba(255,255,255,0.04)' }}>
-      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.04em' }}>{label}</span>
-      <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{value}</span>
     </div>
   );
 }

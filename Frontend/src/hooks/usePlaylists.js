@@ -9,6 +9,14 @@ export const usePlaylists = () => {
   });
 };
 
+export const usePlaylist = (id) => {
+  return useQuery({
+    queryKey: ["playlist", id],
+    queryFn: () => playlistsApi.getById(id),
+    enabled: !!id,
+  });
+};
+
 export const useCreatePlaylist = () => {
   const qc = useQueryClient();
   return useMutation({
@@ -18,6 +26,19 @@ export const useCreatePlaylist = () => {
       toast.success("Playlist created");
     },
     onError: (err) => toast.error(err.response?.data?.message || "Failed to create playlist"),
+  });
+};
+
+export const useUpdatePlaylist = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }) => playlistsApi.update(id, payload),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["playlists"] });
+      qc.invalidateQueries({ queryKey: ["playlist", data.playlist._id] });
+      toast.success("Playlist updated");
+    },
+    onError: (err) => toast.error(err.response?.data?.message || "Failed to update playlist"),
   });
 };
 
@@ -37,9 +58,10 @@ export const useAddProblemToPlaylist = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ playlistId, problemId }) => playlistsApi.addProblem(playlistId, problemId),
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["playlists"] });
-      toast.success("Problem added to playlist");
+      qc.invalidateQueries({ queryKey: ["playlist", data.playlist._id] });
+      toast.success("Added to playlist");
     },
     onError: (err) => toast.error(err.response?.data?.message || "Failed to add problem"),
   });
@@ -49,9 +71,10 @@ export const useRemoveProblemFromPlaylist = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ playlistId, problemId }) => playlistsApi.removeProblem(playlistId, problemId),
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["playlists"] });
-      toast.success("Problem removed from playlist");
+      qc.invalidateQueries({ queryKey: ["playlist", data.playlist._id] });
+      toast.success("Removed from playlist");
     },
     onError: (err) => toast.error(err.response?.data?.message || "Failed to remove problem"),
   });
