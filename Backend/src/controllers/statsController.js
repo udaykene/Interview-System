@@ -9,7 +9,14 @@ import User from "../models/User.js";
  */
 export async function getUserStats(req, res) {
   try {
-    const userId = req.user._id;
+    let userId = req.user._id;
+    const { username } = req.query;
+
+    if (username) {
+      const user = await User.findOne({ username: username.toLowerCase() });
+      if (!user) return res.status(404).json({ message: "User not found" });
+      userId = user._id;
+    }
 
     // Get all accepted submission problem IDs (unique)
     const acceptedSubmissions = await Submission.aggregate([
@@ -74,7 +81,15 @@ export async function getUserStats(req, res) {
  */
 export async function getUserActivity(req, res) {
   try {
-    const userId = req.user._id;
+    let userId = req.user._id;
+    const { username } = req.query;
+
+    if (username) {
+      const user = await User.findOne({ username: username.toLowerCase() });
+      if (!user) return res.status(404).json({ message: "User not found" });
+      userId = user._id;
+    }
+
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
     oneYearAgo.setHours(0, 0, 0, 0);
@@ -116,7 +131,15 @@ export async function getUserActivity(req, res) {
  */
 export async function getUserHistory(req, res) {
   try {
-    const userId = req.user._id;
+    let userId = req.user._id;
+    const { username } = req.query;
+
+    if (username) {
+      const user = await User.findOne({ username: username.toLowerCase() });
+      if (!user) return res.status(404).json({ message: "User not found" });
+      userId = user._id;
+    }
+
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
     const skip = (page - 1) * limit;

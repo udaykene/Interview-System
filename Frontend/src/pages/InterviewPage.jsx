@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { useActiveSessions, useCreateSession, useMyRecentSessions } from "../hooks/useSessions";
+import { useActiveSessions, useCreateSession, useEndSession, useMyRecentSessions } from "../hooks/useSessions";
 import { useAuth } from "../context/AuthContextState";
 import Navbar from "../components/Navbar";
 import CreateSessionModal from "../components/CreateSessionModal";
 import { motion } from "framer-motion";
 import {
   Plus, Hash, Zap, Users, Clock, ChevronRight,
-  BookOpen, Code2, Activity, Loader2, ArrowRight, Sparkles
+  BookOpen, Code2, Activity, Loader2, ArrowRight, Sparkles, LogOut
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -22,9 +22,10 @@ function InterviewPage() {
   const { user } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [joinCode, setJoinCode] = useState("");
-  const [roomConfig, setRoomConfig] = useState({ problem: "", problemId: "", difficulty: "", visibility: "public" });
+  const [roomConfig, setRoomConfig] = useState({ problem: "", problemId: "", difficulty: "", visibility: "private" });
 
   const createSessionMutation = useCreateSession();
+  const endSessionMutation = useEndSession();
   const { data: activeData, isLoading: loadingActive } = useActiveSessions();
   const { data: recentData, isLoading: loadingRecent } = useMyRecentSessions();
 
@@ -35,11 +36,23 @@ function InterviewPage() {
     if (!roomConfig.problem || !roomConfig.difficulty) return;
     createSessionMutation.mutate(
       { problemId: roomConfig.problemId, problem: roomConfig.problem, difficulty: roomConfig.difficulty.toLowerCase(), visibility: roomConfig.visibility },
-      { onSuccess: (data) => { setShowCreateModal(false); navigate(`/session/${data.session._id}`); } }
+      {
+        onSuccess: (data) => {
+          setShowCreateModal(false);
+          setRoomConfig({ problem: "", problemId: "", difficulty: "", visibility: "private" });
+          navigate(`/session/${data.session._id}`);
+        },
+      }
     );
   };
 
   const isUserInSession = (session) => session.host?._id === user?.id || session.participant?._id === user?.id;
+  const isHost = (session) => session.host?._id === user?.id;
+
+  const handleEndSession = (sessionId) => {
+    if (!window.confirm("End this session for all participants?")) return;
+    endSessionMutation.mutate(sessionId);
+  };
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -155,7 +168,10 @@ function InterviewPage() {
                 <SessionCard
                   key={session._id} session={session}
                   isOwn={isUserInSession(session)}
+                  isHost={isHost(session)}
                   onJoin={() => navigate(`/session/${session._id}`)}
+                  onEnd={() => handleEndSession(session._id)}
+                  isEnding={endSessionMutation.isPending && endSessionMutation.variables === session._id}
                   index={i}
                 />
               ))}
@@ -207,7 +223,7 @@ function DiffBadge({ difficulty }) {
 }
 
 /* ─── Session Card ────────────────────── */
-function SessionCard({ session, isOwn, onJoin, index }) {
+function SessionCard({ session, isOwn, isHost, onJoin, onEnd, isEnding, index }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -227,10 +243,24 @@ function SessionCard({ session, isOwn, onJoin, index }) {
             {isOwn && <span className="badge badge-purple">YOURS</span>}
           </div>
         </div>
-        <button className="btn btn-sm btn-violet" style={{ flexShrink: 0, marginLeft: 12 }}
-          onClick={e => { e.stopPropagation(); onJoin(); }}>
-          <Zap size={12} />Join
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0, marginLeft: 12 }}>
+          {isHost && (
+            <button
+              className="btn btn-sm btn-danger"
+              disabled={isEnding}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEnd();
+              }}
+            >
+              {isEnding ? <Loader2 size={12} className="animate-spin" /> : <LogOut size={12} />} End
+            </button>
+          )}
+          <button className="btn btn-sm btn-violet"
+            onClick={e => { e.stopPropagation(); onJoin(); }}>
+            <Zap size={12} />{isOwn ? "Rejoin" : "Join"}
+          </button>
+        </div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--text-muted)' }}>
         {session.host?.profileImage ? (

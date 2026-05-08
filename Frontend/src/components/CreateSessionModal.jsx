@@ -5,6 +5,7 @@ import { useProblems } from "../hooks/useProblems";
 function CreateSessionModal({ isOpen, onClose, roomConfig, setRoomConfig, onCreateRoom, isCreating }) {
   const { data } = useProblems();
   const problems = data?.problems || [];
+  const selectHasValue = Boolean(roomConfig.problemId);
 
   return (
     <AnimatePresence>
@@ -39,31 +40,69 @@ function CreateSessionModal({ isOpen, onClose, roomConfig, setRoomConfig, onCrea
               {/* Problem Selection */}
               <div className="input-group">
                 <label className="input-label">Select Problem <span style={{ color: 'var(--accent-red)' }}>*</span></label>
-                <select className="input" style={{ cursor: 'pointer' }}
+                <select
+                  className="input"
+                  style={{
+                    cursor: 'pointer',
+                    color: selectHasValue ? 'var(--text-primary)' : 'var(--text-muted)',
+                    background: '#171717',
+                    appearance: 'auto',
+                    WebkitAppearance: 'menulist',
+                  }}
                   value={roomConfig.problemId || ""}
                   onChange={(e) => {
                     const sp = problems.find(p => p.slug === e.target.value);
-                    setRoomConfig({ difficulty: sp.difficulty, problem: sp.title, problemId: sp.slug, visibility: roomConfig.visibility || "public" });
-                  }}>
-                  <option value="" disabled>Choose a coding problem...</option>
-                  {problems.map(p => <option key={p.slug} value={p.slug}>{p.title} ({p.difficulty})</option>)}
+                    if (!sp) {
+                      setRoomConfig((prev) => ({ ...prev, problem: "", problemId: "", difficulty: "", visibility: "private" }));
+                      return;
+                    }
+                    setRoomConfig({
+                      difficulty: sp.difficulty,
+                      problem: sp.title,
+                      problemId: sp.slug,
+                      visibility: "private",
+                    });
+                  }}
+                >
+                  <option value="" disabled style={{ color: '#94a3b8', backgroundColor: '#171717' }}>
+                    Choose a coding problem...
+                  </option>
+                  {problems.map((p) => (
+                    <option
+                      key={p.slug}
+                      value={p.slug}
+                      style={{ color: '#f8fafc', backgroundColor: '#111111' }}
+                    >
+                      {p.title} ({p.difficulty})
+                    </option>
+                  ))}
                 </select>
               </div>
 
-              {/* Visibility */}
               <div className="input-group">
                 <label className="input-label">Session Type</label>
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <button className={`btn ${roomConfig.visibility === "public" ? "btn-violet" : "btn-secondary"}`}
-                    style={{ flex: 1, borderRadius: 12 }}
-                    onClick={() => setRoomConfig({ ...roomConfig, visibility: "public" })}>Public</button>
-                  <button className={`btn ${roomConfig.visibility === "private" ? "btn-violet" : "btn-secondary"}`}
-                    style={{ flex: 1, borderRadius: 12 }}
-                    onClick={() => setRoomConfig({ ...roomConfig, visibility: "private" })}>Private</button>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 16,
+                    padding: '14px 16px',
+                    borderRadius: 14,
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>Private only</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                      Every new interview room is invite-only and protected by a join code.
+                    </div>
+                  </div>
+                  <span className="badge" style={{ background: 'rgba(129,140,248,0.14)', color: '#a5b4fc', border: '1px solid rgba(129,140,248,0.22)' }}>
+                    PRIVATE
+                  </span>
                 </div>
-                <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: 'var(--text-muted)', marginTop: 4, letterSpacing: '0.02em' }}>
-                  Private sessions require a join code. Public sessions appear in the live list.
-                </p>
               </div>
 
               {/* Summary */}
@@ -80,6 +119,7 @@ function CreateSessionModal({ isOpen, onClose, roomConfig, setRoomConfig, onCrea
                     <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.8 }}>
                       <div>Problem: <strong style={{ color: 'var(--text-primary)' }}>{roomConfig.problem}</strong></div>
                       <div>Type: <strong style={{ color: 'var(--text-primary)', textTransform: 'capitalize' }}>{roomConfig.visibility}</strong></div>
+                      <div>Access: <strong style={{ color: 'var(--text-primary)' }}>Join code required</strong></div>
                       <div>Participants: <strong style={{ color: 'var(--text-primary)' }}>2 (1-on-1)</strong></div>
                     </div>
                   </div>

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContextState";
 import { motion, AnimatePresence } from "framer-motion";
+import axiosInstance from "../lib/axios";
 import {
   Code2,
   LayoutDashboard,
@@ -12,13 +13,186 @@ import {
   Shield,
   Users,
   BarChart3,
+  Search,
+  CheckCircle2,
 } from "lucide-react";
+
+function SearchBar() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState({ problems: [], users: [] });
+  const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const containerRef = useRef(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!query.trim()) {
+      setResults({ problems: [], users: [] });
+      setIsOpen(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const { data } = await axiosInstance.get(`/search?q=${query}`);
+        setResults(data);
+        setIsOpen(true);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const handleSelect = (type, item) => {
+    setIsOpen(false);
+    setQuery("");
+    if (type === "problem") {
+      navigate(`/problem/${item.slug}`);
+    } else {
+      navigate(`/u/${item.username}`);
+    }
+  };
+
+  return (
+    <div ref={containerRef} style={{ position: "relative", width: "100%", maxWidth: 300, marginRight: 20 }} className="md-hidden">
+      <div style={{ position: "relative" }}>
+        <Search
+          size={14}
+          style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }}
+        />
+        <input
+          type="text"
+          placeholder="Search problems or users..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => query.trim() && setIsOpen(true)}
+          style={{
+            width: "100%",
+            padding: "8px 12px 8px 36px",
+            background: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: 10,
+            color: "var(--text-primary)",
+            fontSize: 13,
+            outline: "none",
+            transition: "all 0.2s",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.08)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+        />
+      </div>
+
+      <AnimatePresence>
+        {isOpen && (results.problems.length > 0 || results.users.length > 0) && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            style={{
+              position: "absolute",
+              top: "calc(100% + 8px)",
+              left: 0,
+              right: 0,
+              background: "#111111",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 12,
+              boxShadow: "0 10px 40px rgba(0,0,0,0.5)",
+              overflow: "hidden",
+              zIndex: 100,
+              maxHeight: 400,
+              overflowY: "auto",
+            }}
+          >
+            {results.problems.length > 0 && (
+              <div style={{ padding: "8px 0" }}>
+                <div style={{ padding: "8px 16px", fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Problems
+                </div>
+                {results.problems.map((p) => (
+                  <div
+                    key={p.slug}
+                    onClick={() => handleSelect("problem", p)}
+                    style={{
+                      padding: "10px 16px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      cursor: "pointer",
+                      transition: "background 0.2s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: p.difficulty === "Easy" ? "var(--accent-green)" : p.difficulty === "Medium" ? "var(--accent-yellow)" : "var(--accent-red)" }} />
+                    <span style={{ fontSize: 13, color: "var(--text-primary)" }}>{p.title}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {results.users.length > 0 && (
+              <div style={{ padding: "8px 0", borderTop: results.problems.length > 0 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
+                <div style={{ padding: "8px 16px", fontSize: 11, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Users
+                </div>
+                {results.users.map((u) => (
+                  <div
+                    key={u.username}
+                    onClick={() => handleSelect("user", u)}
+                    style={{
+                      padding: "10px 16px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      cursor: "pointer",
+                      transition: "background 0.2s",
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  >
+                    {u.profileImage ? (
+                      <img src={u.profileImage} alt={u.name} style={{ width: 24, height: 24, borderRadius: "50%", objectFit: "cover" }} />
+                    ) : (
+                      <div style={{ width: 24, height: 24, borderRadius: "50%", background: "var(--gradient-brand)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: "white" }}>
+                        {u.name[0].toUpperCase()}
+                      </div>
+                    )}
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      <span style={{ fontSize: 13, color: "var(--text-primary)" }}>{u.name}</span>
+                      <span style={{ fontSize: 11, color: "var(--text-muted)" }}>@{u.username}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const interviewHref = "/interview";
 
   const handleLogout = async () => {
     await logout();
@@ -77,9 +251,10 @@ function Navbar() {
           Problems
         </NavLink>
         <NavLink
-          to="/interview"
+          to={interviewHref}
           icon={<Users size={14} />}
           active={isActive("/interview")}
+          newTab
         >
           Interview
         </NavLink>
@@ -102,6 +277,9 @@ function Navbar() {
       </div>
 
       <div style={{ flex: 1 }} className="md-hidden" />
+
+      {/* Search Bar */}
+      <SearchBar />
 
       {/* User Menu */}
       <div style={{ position: "relative", flexShrink: 0 }}>
@@ -279,7 +457,7 @@ function Navbar() {
                   <DropdownItem
                     icon={<Users size={14} />}
                     onClick={() => {
-                      navigate("/interview");
+                      window.open(interviewHref, "_blank", "noopener,noreferrer");
                       setDropdownOpen(false);
                     }}
                   >
@@ -329,10 +507,12 @@ function Navbar() {
   );
 }
 
-function NavLink({ to, icon, children, active }) {
+function NavLink({ to, icon, children, active, newTab = false }) {
   return (
     <Link
       to={to}
+      target={newTab ? "_blank" : undefined}
+      rel={newTab ? "noopener noreferrer" : undefined}
       style={{
         display: "flex",
         alignItems: "center",

@@ -1,10 +1,12 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContextState";
 import Navbar from "../components/Navbar";
 import { motion } from "framer-motion";
 import {
   Camera, Check, X,
-  MapPin, Eye, MessageSquare, Award, Star, Info, ChevronDown
+  MapPin, Eye, MessageSquare, Award, Star, Info, ChevronDown,
+  UserPlus, UserMinus, Loader2
 } from "lucide-react";
 import axiosInstance from "../lib/axios";
 import toast from "react-hot-toast";
@@ -132,31 +134,77 @@ function ProfileActivity({ activityMap = {} }) {
 }
 
 function ProfilePage() {
-  const { user, refresh } = useAuth();
+  const { username } = useParams();
+  const navigate = useNavigate();
+  const { user: currentUser, refresh: refreshAuth } = useAuth();
+  
+  const [profileUser, setProfileUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [following, setFollowing] = useState(false);
   const [activeTab, setActiveTab] = useState("Recent AC");
   const fileRef = useRef();
+  
+  const isOwnProfile = !username || username === currentUser?.username;
+  const targetUsername = username || currentUser?.username;
 
-  const { data: statsData } = useUserStats();
-  const { data: activityData } = useUserActivity();
-  const { data: historyData } = useUserHistory(1, 10);
+  const { data: statsData } = useUserStats(targetUsername);
+  const { data: activityData } = useUserActivity(targetUsername);
+  const { data: historyData } = useUserHistory(targetUsername, 1, 10);
 
-  const stats = statsData || {};
   const submissions = historyData?.submissions || [];
 
+  useEffect(() => {
+    if (!targetUsername) return;
+    
+    const fetchProfile = async () => {
+      setLoading(true);
+      try {
+        if (isOwnProfile && currentUser) {
+          setProfileUser((prev) => ({ ...prev, ...currentUser }));
+        }
+        const { data } = await axiosInstance.get(`/auth/user/${targetUsername}`);
+        setProfileUser(data.user);
+        setFollowing(data.user.isFollowing);
+      } catch (err) {
+        toast.error("User not found");
+        navigate("/problems");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchProfile();
+  }, [targetUsername, navigate, isOwnProfile, currentUser]);
+
+  const stats = profileUser?.stats || {};
+  // const favorites = profileUser?.favorites || [];
+
   const [form, setForm] = useState({
-    name: user?.name || "",
-    username: user?.username || "",
-    bio: user?.bio || "",
-    profileImage: user?.profileImage || "",
-    socialLinks: {
-      github: user?.socialLinks?.github || "",
-      linkedin: user?.socialLinks?.linkedin || "",
-      twitter: user?.socialLinks?.twitter || "",
-      website: user?.socialLinks?.website || "",
-    },
+    name: "",
+    username: "",
+    bio: "",
+    profileImage: "",
+    socialLinks: { github: "", linkedin: "", twitter: "", website: "" },
   });
+
+  useEffect(() => {
+    if (profileUser && isOwnProfile) {
+      setForm({
+        name: profileUser.name || "",
+        username: profileUser.username || "",
+        bio: profileUser.bio || "",
+        profileImage: profileUser.profileImage || "",
+        socialLinks: {
+          github: profileUser.socialLinks?.github || "",
+          linkedin: profileUser.socialLinks?.linkedin || "",
+          twitter: profileUser.socialLinks?.twitter || "",
+          website: profileUser.socialLinks?.website || "",
+        },
+      });
+    }
+  }, [profileUser, isOwnProfile]);
 
   const handleImageChange = (e) => {
     const file = e.target.files?.[0];
@@ -170,8 +218,9 @@ function ProfilePage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await axiosInstance.put("/auth/me", form);
-      await refresh();
+      const { data } = await axiosInstance.put("/auth/me", form);
+      await refreshAuth();
+      setProfileUser((prev) => ({ ...prev, ...data.user }));
       setEditing(false);
       toast.success("Profile updated!");
     } catch (err) {
@@ -181,7 +230,36 @@ function ProfilePage() {
     }
   };
 
+  const handleToggleFollow = async () => {
+    if (!profileUser) return;
+    try {
+      const { data } = await axiosInstance.post(`/auth/user/${profileUser.id}/follow`);
+      setFollowing(data.isFollowing);
+      setProfileUser(prev => ({
+        ...prev,
+        followersCount: data.followersCount
+      }));
+      toast.success(data.isFollowing ? `Following ${profileUser.name}` : `Unfollowed ${profileUser.name}`);
+    } catch (err) {
+      toast.error("Failed to update follow status");
+    }
+  };
+
   const tabs = ["Recent AC", "List", "Solutions", "Discuss"];
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#050505', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Loader2 size={32} className="animate-spin" color="var(--accent-violet)" />
+      </div>
+    );
+  }
+
+  const userToShow = profileUser;
+  // Note: we'll use local stats for now as userToShow has them. 
+  // For activity heatmap and history, we'd ideally fetch them for the target user too.
+  // But let's assume we use the existing hooks which might need userId.
+  // For simplicity, we'll just show what we have in userToShow.
 
   return (
     <div style={{ minHeight: '100vh', background: '#050505', color: '#f0f0f0' }}>
@@ -195,20 +273,38 @@ function ProfilePage() {
             <motion.div {...fadeUp(0)} style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               {/* Avatar */}
               <div style={{ position: 'relative', width: 'fit-content', marginBottom: 16 }}>
-                {form.profileImage ? (
-                  <img src={form.profileImage} alt={form.name} style={{
-                    width: 100, height: 100, borderRadius: 16, objectFit: 'cover',
-                    border: '2px solid rgba(255,255,255,0.08)',
-                  }} />
+                {isOwnProfile ? (
+                  form.profileImage ? (
+                    <img src={form.profileImage} alt={form.name} style={{
+                      width: 100, height: 100, borderRadius: 16, objectFit: 'cover',
+                      border: '2px solid rgba(255,255,255,0.08)',
+                    }} />
+                  ) : (
+                    <div style={{
+                      width: 100, height: 100, borderRadius: 16,
+                      background: 'linear-gradient(135deg, #7c5bf0, #818cf8)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 36, fontWeight: 800, color: 'white',
+                    }}>
+                      {userToShow?.name?.[0]?.toUpperCase()}
+                    </div>
+                  )
                 ) : (
-                  <div style={{
-                    width: 100, height: 100, borderRadius: 16,
-                    background: 'linear-gradient(135deg, #7c5bf0, #818cf8)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 36, fontWeight: 800, color: 'white',
-                  }}>
-                    {user?.name?.[0]?.toUpperCase()}
-                  </div>
+                  userToShow?.profileImage ? (
+                    <img src={userToShow.profileImage} alt={userToShow.name} style={{
+                      width: 100, height: 100, borderRadius: 16, objectFit: 'cover',
+                      border: '2px solid rgba(255,255,255,0.08)',
+                    }} />
+                  ) : (
+                    <div style={{
+                      width: 100, height: 100, borderRadius: 16,
+                      background: 'linear-gradient(135deg, #7c5bf0, #818cf8)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 36, fontWeight: 800, color: 'white',
+                    }}>
+                      {userToShow?.name?.[0]?.toUpperCase()}
+                    </div>
+                  )
                 )}
                 {editing && (
                   <>
@@ -227,9 +323,9 @@ function ProfilePage() {
               </div>
 
               {/* Name & Username */}
-              <h1 style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 2 }}>{user?.name}</h1>
+              <h1 style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 2 }}>{userToShow?.name}</h1>
               <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: '#6b7280', marginBottom: 12 }}>
-                @{user?.username || user?.email?.split('@')[0]}
+                @{userToShow?.username}
               </p>
 
               {/* Rank */}
@@ -239,34 +335,58 @@ function ProfilePage() {
 
               {/* Following / Followers */}
               <div style={{ display: 'flex', gap: 16, fontSize: 12, marginBottom: 16 }}>
-                <span><strong style={{ color: 'white' }}>0</strong> <span style={{ color: '#6b7280' }}>Following</span></span>
-                <span><strong style={{ color: 'white' }}>0</strong> <span style={{ color: '#6b7280' }}>Followers</span></span>
+                <span><strong style={{ color: 'white' }}>{userToShow?.followingCount || 0}</strong> <span style={{ color: '#6b7280' }}>Following</span></span>
+                <span><strong style={{ color: 'white' }}>{userToShow?.followersCount || 0}</strong> <span style={{ color: '#6b7280' }}>Followers</span></span>
               </div>
 
-              {/* Edit Profile button */}
-              {!editing ? (
-                <button onClick={() => setEditing(true)} style={{
-                  width: '100%', padding: '8px 0', borderRadius: 8,
-                  background: 'rgba(16,185,129,0.1)', color: '#10b981',
-                  border: '1px solid rgba(16,185,129,0.2)',
-                  fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                  transition: 'all 0.2s', marginBottom: 16,
-                }}>
-                  Edit Profile
-                </button>
-              ) : (
-                <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-                  <button onClick={() => setEditing(false)} className="btn btn-sm btn-ghost" style={{ flex: 1 }}><X size={13} />Cancel</button>
-                  <button onClick={handleSave} disabled={saving} className="btn btn-sm btn-primary" style={{ flex: 1 }}>
-                    {saving ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <Check size={13} />}Save
+              {/* Action Button: Edit or Follow */}
+              {isOwnProfile ? (
+                !editing ? (
+                  <button onClick={() => setEditing(true)} style={{
+                    width: '100%', padding: '8px 0', borderRadius: 8,
+                    background: 'rgba(16,185,129,0.1)', color: '#10b981',
+                    border: '1px solid rgba(16,185,129,0.2)',
+                    fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                    transition: 'all 0.2s', marginBottom: 16,
+                  }}>
+                    Edit Profile
                   </button>
-                </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                    <button onClick={() => setEditing(false)} className="btn btn-sm btn-ghost" style={{ flex: 1 }}><X size={13} />Cancel</button>
+                    <button onClick={handleSave} disabled={saving} className="btn btn-sm btn-primary" style={{ flex: 1 }}>
+                      {saving ? <div className="spinner" style={{ width: 14, height: 14 }} /> : <Check size={13} />}Save
+                    </button>
+                  </div>
+                )
+              ) : (
+                <button 
+                  onClick={handleToggleFollow}
+                  style={{
+                    width: '100%', padding: '10px 0', borderRadius: 10,
+                    background: following ? 'rgba(255,255,255,0.05)' : '#10b981',
+                    color: following ? 'white' : 'white',
+                    border: 'none',
+                    fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    transition: 'all 0.2s', marginBottom: 16,
+                  }}
+                >
+                  {following ? <><UserMinus size={16} /> Unfollow</> : <><UserPlus size={16} /> Follow</>}
+                </button>
               )}
 
               {/* Location */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#6b7280', marginBottom: 24 }}>
                 <MapPin size={14} /> India
               </div>
+              
+              {/* Bio if exists */}
+              {userToShow?.bio && (
+                <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 24, lineHeight: 1.5 }}>
+                  {userToShow.bio}
+                </div>
+              )}
 
               {/* Divider */}
               <div style={{ height: 1, background: 'rgba(255,255,255,0.05)', marginBottom: 24 }} />
@@ -310,7 +430,7 @@ function ProfilePage() {
                   padding: '4px 10px', borderRadius: 6, fontSize: 11,
                   background: 'rgba(255,255,255,0.05)', color: '#9ca3af', fontWeight: 500,
                 }}>Java</span>
-                <span style={{ fontSize: 11, color: '#4b5563' }}>3 problems solved</span>
+                <span style={{ fontSize: 11, color: '#4b5563' }}>{userToShow?.stats?.problemsSolved || 0} problems solved</span>
               </div>
             </motion.div>
           </aside>

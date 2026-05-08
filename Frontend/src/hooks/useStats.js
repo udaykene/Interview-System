@@ -1,23 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
 import { statsApi } from "../api/stats";
 
-export const useUserStats = () => {
+export const useUserStats = (username) => {
   return useQuery({
-    queryKey: ["userStats"],
-    queryFn: statsApi.getStats,
+    queryKey: ["userStats", username],
+    queryFn: () => statsApi.getStats(username),
   });
 };
 
-export const useUserActivity = () => {
+export const useUserActivity = (username) => {
   return useQuery({
-    queryKey: ["userActivity"],
-    queryFn: statsApi.getActivity,
+    queryKey: ["userActivity", username],
+    queryFn: () => statsApi.getActivity(username),
   });
 };
 
-export const useUserHistory = (page = 1, limit = 20) => {
+export const useUserHistory = (username, page = 1, limit = 20) => {
   return useQuery({
-    queryKey: ["userHistory", page, limit],
-    queryFn: () => statsApi.getHistory(page, limit),
+    queryKey: ["userHistory", username, page, limit],
+    queryFn: () => statsApi.getHistory(username, page, limit),
   });
 };

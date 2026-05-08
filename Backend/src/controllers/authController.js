@@ -335,3 +335,79 @@ export const logout = async (req, res) => {
   res.clearCookie("refresh_token", refreshCookieOptions(isProd));
   res.status(200).json({ ok: true });
 };
+
+// ─────────────────────────────────────────────
+// Public User Profile & Follow
+// ─────────────────────────────────────────────
+export const getUserProfile = async (req, res) => {
+  const { username } = req.params;
+  try {
+    const user = await User.findOne({ username: username.toLowerCase() })
+      .select("name username email profileImage bio stats socialLinks role createdAt followers following")
+      .populate("favorites", "title slug difficulty acceptanceRate");
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({
+      user: {
+        id: user._id.toString(),
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        profileImage: user.profileImage,
+        bio: user.bio,
+        stats: user.stats,
+        socialLinks: user.socialLinks,
+        role: user.role,
+        createdAt: user.createdAt,
+        favorites: user.favorites,
+        followersCount: user.followers.length,
+        followingCount: user.following.length,
+        isFollowing: req.user ? user.followers.includes(req.user._id) : false,
+      },
+    });
+  } catch (error) {
+    console.error("Error in getUserProfile:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const toggleFollow = async (req, res) => {
+  const { userId } = req.params; // ID of the user to follow/unfollow
+  const myId = req.user._id;
+
+  if (userId === myId.toString()) {
+    return res.status(400).json({ message: "You cannot follow yourself" });
+  }
+
+  try {
+    const targetUser = await User.findById(userId);
+    const currentUser = await User.findById(myId);
+
+    if (!targetUser || !currentUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isFollowing = currentUser.following.includes(userId);
+
+    if (isFollowing) {
+      // Unfollow
+      currentUser.following = currentUser.following.filter(id => id.toString() !== userId);
+      targetUser.followers = targetUser.followers.filter(id => id.toString() !== myId.toString());
+    } else {
+      // Follow
+      currentUser.following.push(userId);
+      targetUser.followers.push(myId);
+    }
+
+    await Promise.all([currentUser.save(), targetUser.save()]);
+
+    res.status(200).json({
+      isFollowing: !isFollowing,
+      followersCount: targetUser.followers.length,
+    });
+  } catch (error) {
+    console.error("Error in toggleFollow:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};

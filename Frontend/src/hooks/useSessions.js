@@ -1,12 +1,18 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { sessionApi } from "../api/sessions";
 
 export const useCreateSession = () => {
+  const qc = useQueryClient();
   const result = useMutation({
     mutationKey: ["createSession"],
     mutationFn: sessionApi.createSession,
-    onSuccess: () => toast.success("Session created successfully!"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["activeSessions"] });
+      qc.invalidateQueries({ queryKey: ["myRecentSessions"] });
+      toast.success("Session created successfully!");
+    },
     onError: (error) => toast.error(error.response?.data?.message || "Failed to create room"),
   });
 
@@ -55,10 +61,16 @@ export const useJoinSession = () => {
 };
 
 export const useEndSession = () => {
+  const qc = useQueryClient();
   const result = useMutation({
     mutationKey: ["endSession"],
     mutationFn: sessionApi.endSession,
-    onSuccess: () => toast.success("Session ended successfully!"),
+    onSuccess: (_, sessionId) => {
+      qc.invalidateQueries({ queryKey: ["activeSessions"] });
+      qc.invalidateQueries({ queryKey: ["myRecentSessions"] });
+      qc.invalidateQueries({ queryKey: ["session", sessionId] });
+      toast.success("Session ended successfully!");
+    },
     onError: (error) => toast.error(error.response?.data?.message || "Failed to end session"),
   });
 

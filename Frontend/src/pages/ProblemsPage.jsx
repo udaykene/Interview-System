@@ -10,7 +10,7 @@ import AddToListPopover from "../components/AddToListPopover";
 import { useProblems, useToggleFavorite, useFavorites } from "../hooks/useProblems";
 import { usePlaylists, useCreatePlaylist, useAddProblemToPlaylist, useRemoveProblemFromPlaylist } from "../hooks/usePlaylists";
 import { useAuth } from "../context/AuthContextState";
-import { Loader2 } from "lucide-react";
+import { Loader2, BookOpen, Users, Star, Code2, LayoutDashboard } from "lucide-react";
 
 function ProblemsPage() {
   const { user } = useAuth();
@@ -30,6 +30,18 @@ function ProblemsPage() {
   const problems = problemsData?.problems || [];
   const playlists = playlistsData?.playlists || [];
   const favoriteIds = useMemo(() => (favData?.favorites || []).map(f => typeof f === 'string' ? f : f._id), [favData]);
+  const selectedPlaylist = useMemo(() => {
+    if (!activeView.startsWith("list-")) return null;
+    const playlistId = activeView.replace("list-", "");
+    return playlists.find((playlist) => playlist._id === playlistId) || null;
+  }, [activeView, playlists]);
+  const favoritesPlaylist = useMemo(() => ({
+    _id: "favorites",
+    name: "Favorite",
+    problems: favData?.favorites || [],
+    userId: user ? { name: user.name } : null,
+    isPublic: false,
+  }), [favData, user]);
 
   const isSolved = (problemId) => user?.stats?.solvedProblems?.includes(problemId);
 
@@ -54,47 +66,43 @@ function ProblemsPage() {
       );
     }
 
-    if (activeView === "library") {
-      return <ProblemsLibrary 
-        problems={problems} 
-        favoriteIds={favoriteIds} 
-        onToggleFavorite={(id) => toggleFavMutation.mutate(id)}
-        isSolved={isSolved}
-        onAddToList={(id) => setPopoverProblemId(id)}
-      />;
-    }
-
     if (activeView === "study-plan") {
       return <StudyPlanView />;
     }
 
     if (activeView === "favorites") {
-      const favProblems = problems.filter(p => favoriteIds.includes(p._id));
-      return <PlaylistView 
-        playlist={{ name: "Favorite", problems: favProblems, userId: user }}
-        isSolved={isSolved}
-        favoriteIds={favoriteIds}
-        onToggleFavorite={(id) => toggleFavMutation.mutate(id)}
-        onAddToList={(id) => setPopoverProblemId(id)}
-      />;
+      return (
+        <PlaylistView
+          playlist={favoritesPlaylist}
+          isSolved={isSolved}
+          favoriteIds={favoriteIds}
+          onToggleFavorite={(id) => toggleFavMutation.mutate(id)}
+          onAddToList={(id) => setPopoverProblemId(id)}
+        />
+      );
     }
 
-    if (activeView.startsWith("list-")) {
-      const listId = activeView.replace("list-", "");
-      const playlist = playlists.find(l => l._id === listId);
-      return <PlaylistView 
-        playlist={playlist}
-        isSolved={isSolved}
-        favoriteIds={favoriteIds}
-        onToggleFavorite={(id) => toggleFavMutation.mutate(id)}
-        onAddToList={(id) => setPopoverProblemId(id)}
-      />;
+    if (selectedPlaylist) {
+      return (
+        <PlaylistView
+          playlist={selectedPlaylist}
+          isSolved={isSolved}
+          favoriteIds={favoriteIds}
+          onToggleFavorite={(id) => toggleFavMutation.mutate(id)}
+          onAddToList={(id) => setPopoverProblemId(id)}
+        />
+      );
     }
 
     return (
-      <div style={{ textAlign: 'center', padding: 64, color: 'var(--text-muted)' }}>
-        View "{activeView}" coming soon...
-      </div>
+      <ProblemsLibrary
+        problems={problems}
+        favoriteIds={favoriteIds}
+        onToggleFavorite={(id) => toggleFavMutation.mutate(id)}
+        isSolved={isSolved}
+        onAddToList={(id) => setPopoverProblemId(id)}
+        activeView={activeView}
+      />
     );
   };
 
@@ -112,7 +120,41 @@ function ProblemsPage() {
           playlists={playlists}
         />
 
-        <main className="problems-content">
+        <main className="problems-content" style={{ padding: '24px 32px' }}>
+          {/* Header Tabs */}
+          <div style={{ display: 'flex', gap: 24, marginBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            {[
+              { id: 'library', label: 'Problems', icon: <BookOpen size={16} /> },
+              { id: 'users', label: 'Users', icon: <Users size={16} /> },
+              { id: 'public-lists', label: 'Public Lists', icon: <Star size={16} /> },
+              { id: 'knowledge', label: 'Knowledge', icon: <Code2 size={16} /> },
+              { id: 'companies', label: 'Companies', icon: <LayoutDashboard size={16} /> },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveView(tab.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '12px 16px',
+                  background: activeView === tab.id ? 'rgba(255,255,255,0.05)' : 'transparent',
+                  color: activeView === tab.id ? 'white' : 'var(--text-muted)',
+                  border: 'none',
+                  borderBottom: activeView === tab.id ? '2px solid #ffa116' : '2px solid transparent',
+                  borderRadius: '8px 8px 0 0',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
           <AnimatePresence mode="wait">
             <motion.div
               key={activeView}

@@ -12,11 +12,12 @@ import {
   forgotPassword,
   resetPassword,
   updateProfile,
+  getUserProfile,
+  toggleFollow,
 } from "../controllers/authController.js";
 
 const router = express.Router();
-
-// ─── OAuth ───────────────────────────────────
+// ... (omitting OAuth routes for brevity in instruction, but keeping them in replacement)
 router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 router.get(
   "/google/callback",
@@ -43,6 +44,8 @@ router.get("/me", protectRoutes, getMe);
 router.put("/me", protectRoutes, updateProfile);
 router.post("/refresh", refreshTokens);
 router.post("/logout", logout);
+router.get("/user/:username", protectRoutes, getUserProfile);
+router.post("/user/:userId/follow", protectRoutes, toggleFollow);
 router.get("/failure", (_req, res) => res.redirect(`${process.env.CLIENT_URL}/login?error=oauth_failed`));
 
 export default router;

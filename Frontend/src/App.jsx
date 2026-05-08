@@ -58,6 +58,7 @@ function App() {
         <Route path="/dashboard" element={isSignedIn ? <DashboardPage /> : <Navigate to="/login" />} />
         <Route path="/interview" element={isSignedIn ? <InterviewPage /> : <Navigate to="/login" />} />
         <Route path="/profile" element={isSignedIn ? <ProfilePage /> : <Navigate to="/login" />} />
+        <Route path="/u/:username" element={isSignedIn ? <ProfilePage /> : <Navigate to="/login" />} />
         <Route path="/problems" element={isSignedIn ? <ProblemsPage /> : <Navigate to="/login" />} />
         <Route path="/problem/:id" element={isSignedIn ? <ProblemPage /> : <Navigate to="/login" />} />
         <Route path="/session/:id" element={isSignedIn ? <SessionPage /> : <Navigate to="/login" />} />

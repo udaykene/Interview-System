@@ -4,7 +4,7 @@ import Problem from "../models/Problem.js";
 
 export async function createSession(req, res) {
   try {
-    const { problemId, problem, difficulty, visibility } = req.body;
+    const { problemId, problem, difficulty } = req.body;
     const userId = req.user._id;
 
     let problemTitle = problem;
@@ -20,7 +20,7 @@ export async function createSession(req, res) {
     if (!problemTitle || !problemDifficulty) {
       return res.status(400).json({ message: "Problem and difficulty are required" });
     }
-    const sessionVisibility = visibility === "private" ? "private" : "public";
+    const sessionVisibility = "private";
 
     // generate a unique call id for stream video
     const callId = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
