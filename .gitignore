@@ -18,7 +18,7 @@ yarn-error.log*
 # Build outputs
 dist/
 build/
-
+scripts/*
 # IDE and OS files
 notes.tldr
 .DS_Store
