@@ -67,6 +67,19 @@ const hasInvalidTestCaseLine = (value) =>
     .filter(Boolean)
     .some((line) => !line.includes("=>"));
 
+const getTestSuiteStats = (visibleTests, hiddenTests) => {
+  const visibleCount = parseTestCases(visibleTests, false).length;
+  const hiddenCount = parseTestCases(hiddenTests, true).length;
+  const totalCount = visibleCount + hiddenCount;
+
+  return {
+    visibleCount,
+    hiddenCount,
+    totalCount,
+    isRecommendedRange: totalCount >= 12 && totalCount <= 14,
+  };
+};
+
 const bulkImportTemplate = `[
   {
     "title": "Sum Of Two Numbers",
@@ -130,6 +143,11 @@ function AdminDashboardPage() {
       p.category.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [problems, searchQuery]);
+
+  const testSuiteStats = useMemo(
+    () => getTestSuiteStats(form.visibleTests, form.hiddenTests),
+    [form.visibleTests, form.hiddenTests]
+  );
 
   if (user?.role !== "admin") {
     return (
@@ -340,12 +358,13 @@ function AdminDashboardPage() {
                         <th style={{ padding: '16px 20px', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>PROBLEM</th>
                         <th style={{ padding: '16px 20px', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>CATEGORY</th>
                         <th style={{ padding: '16px 20px', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>DIFFICULTY</th>
+                        <th style={{ padding: '16px 20px', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>TESTS</th>
                         <th style={{ padding: '16px 20px', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textAlign: 'right' }}>ACTIONS</th>
                       </tr>
                     </thead>
                     <tbody>
                       {loadingProblems ? (
-                        <tr><td colSpan="4" style={{ padding: 40, textAlign: 'center' }}><Loader2 className="animate-spin" style={{ margin: '0 auto' }} /></td></tr>
+                        <tr><td colSpan="5" style={{ padding: 40, textAlign: 'center' }}><Loader2 className="animate-spin" style={{ margin: '0 auto' }} /></td></tr>
                       ) : filteredProblems.map(p => (
                         <tr key={p.slug} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }} className="hover-row">
                           <td style={{ padding: '16px 20px' }}>
@@ -361,6 +380,12 @@ function AdminDashboardPage() {
                             }}>
                               {p.difficulty}
                             </span>
+                          </td>
+                          <td style={{ padding: '16px 20px', fontSize: 13 }}>
+                            <div style={{ fontWeight: 600 }}>{p.testCases?.length || 0}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                              {(p.testCases || []).filter(t => !t.isHidden).length} visible / {(p.testCases || []).filter(t => t.isHidden).length} hidden
+                            </div>
                           </td>
                           <td style={{ padding: '16px 20px', textAlign: 'right' }}>
                             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -439,9 +464,31 @@ function AdminDashboardPage() {
                   </div>
 
                   <SectionTitle icon={AlertCircle} label="Test Cases" />
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 16, marginBottom: 20 }}>
+                    <TestCountCard label="Visible" value={testSuiteStats.visibleCount} tone="blue" />
+                    <TestCountCard label="Hidden" value={testSuiteStats.hiddenCount} tone="gold" />
+                    <TestCountCard label="Total" value={testSuiteStats.totalCount} tone={testSuiteStats.isRecommendedRange ? "green" : "neutral"} />
+                  </div>
+                  <div style={{
+                    marginBottom: 20,
+                    padding: '14px 16px',
+                    borderRadius: 12,
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                    fontSize: 13,
+                    lineHeight: 1.6,
+                    color: 'var(--text-muted)'
+                  }}>
+                    <div><strong style={{ color: 'var(--text-primary)' }}>Run</strong> executes the first 4 visible test cases.</div>
+                    <div><strong style={{ color: 'var(--text-primary)' }}>Submit</strong> executes every visible and hidden test case.</div>
+                    <div>
+                      Recommended setup: 2-4 visible tests and enough hidden tests to reach 12-14 total.
+                      {!testSuiteStats.isRecommendedRange && testSuiteStats.totalCount > 0 ? ` Current total: ${testSuiteStats.totalCount}.` : ""}
+                    </div>
+                  </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 40 }}>
-                    <FormGroup label="VISIBLE TESTS" type="textarea" value={form.visibleTests} onChange={v => setForm({ ...form, visibleTests: v })} height={160} placeholder="func(args) => expected" />
-                    <FormGroup label="HIDDEN TESTS" type="textarea" value={form.hiddenTests} onChange={v => setForm({ ...form, hiddenTests: v })} height={160} placeholder="func(args) => expected" />
+                    <FormGroup label="VISIBLE TESTS" type="textarea" value={form.visibleTests} onChange={v => setForm({ ...form, visibleTests: v })} height={280} placeholder="func(args) => expected" />
+                    <FormGroup label="HIDDEN TESTS" type="textarea" value={form.hiddenTests} onChange={v => setForm({ ...form, hiddenTests: v })} height={280} placeholder="func(args) => expected" />
                   </div>
 
                   <div style={{ display: 'flex', gap: 16 }}>
@@ -521,6 +568,24 @@ function StatCard({ label, value, icon: Icon, color }) {
         <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>{label}</div>
         <div style={{ fontSize: 20, fontWeight: 700, marginTop: 2 }}>{value}</div>
       </div>
+    </div>
+  );
+}
+
+function TestCountCard({ label, value, tone = "neutral" }) {
+  const tones = {
+    blue: { color: 'var(--accent-blue)', bg: 'rgba(59,130,246,0.1)' },
+    gold: { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+    green: { color: 'var(--accent-green)', bg: 'rgba(16,185,129,0.1)' },
+    neutral: { color: 'var(--text-primary)', bg: 'rgba(255,255,255,0.04)' },
+  };
+
+  const activeTone = tones[tone] || tones.neutral;
+
+  return (
+    <div style={{ padding: 16, borderRadius: 12, background: activeTone.bg, border: '1px solid rgba(255,255,255,0.06)' }}>
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 6, letterSpacing: '0.06em' }}>{label}</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: activeTone.color }}>{value}</div>
     </div>
   );
 }

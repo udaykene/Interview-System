@@ -411,3 +411,50 @@ export const toggleFollow = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+export const getFollowers = async (req, res) => {
+  const { username } = req.params;
+  try {
+    const user = await User.findOne({ username: username.toLowerCase() })
+      .populate("followers", "id name username profileImage");
+    
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Mark each follower if current user is following them
+    const followers = user.followers.map(f => ({
+      id: f._id.toString(),
+      name: f.name,
+      username: f.username,
+      profileImage: f.profileImage,
+      isFollowing: req.user ? req.user.following.some(id => id.toString() === f._id.toString()) : false,
+    }));
+
+    res.status(200).json({ followers });
+  } catch (error) {
+    console.error("Error in getFollowers:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const getFollowing = async (req, res) => {
+  const { username } = req.params;
+  try {
+    const user = await User.findOne({ username: username.toLowerCase() })
+      .populate("following", "id name username profileImage");
+    
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const following = user.following.map(f => ({
+      id: f._id.toString(),
+      name: f.name,
+      username: f.username,
+      profileImage: f.profileImage,
+      isFollowing: true, // They are in the following list, so we must be following them
+    }));
+
+    res.status(200).json({ following });
+  } catch (error) {
+    console.error("Error in getFollowing:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};

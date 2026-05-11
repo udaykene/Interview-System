@@ -14,6 +14,8 @@ import {
   updateProfile,
   getUserProfile,
   toggleFollow,
+  getFollowers,
+  getFollowing,
 } from "../controllers/authController.js";
 
 const router = express.Router();
@@ -46,6 +48,8 @@ router.post("/refresh", refreshTokens);
 router.post("/logout", logout);
 router.get("/user/:username", protectRoutes, getUserProfile);
 router.post("/user/:userId/follow", protectRoutes, toggleFollow);
+router.get("/user/:username/followers", protectRoutes, getFollowers);
+router.get("/user/:username/following", protectRoutes, getFollowing);
 router.get("/failure", (_req, res) => res.redirect(`${process.env.CLIENT_URL}/login?error=oauth_failed`));
 
 export default router;

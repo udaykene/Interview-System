@@ -5,6 +5,10 @@ import User from "../models/User.js";
 import { ENV } from "../lib/env.js";
 
 const PISTON_API = ENV.PISTON_API || "https://emkc.org/api/v2/piston";
+const RUN_VISIBLE_TEST_CASE_LIMIT = Math.max(
+  1,
+  Number.parseInt(ENV.RUN_VISIBLE_TEST_CASE_LIMIT || "4", 10) || 4
+);
 
 const LANGUAGE_MAP = {
   javascript: { language: "javascript", version: "18.15.0" },
@@ -566,7 +570,9 @@ export async function runCode(req, res) {
     const problem = await Problem.findById(problemId);
     if (!problem) return res.status(404).json({ message: "Problem not found" });
 
-    const visibleTestCases = (problem.testCases || []).filter((tc) => !tc.isHidden).slice(0, 3);
+    const visibleTestCases = (problem.testCases || [])
+      .filter((tc) => !tc.isHidden)
+      .slice(0, RUN_VISIBLE_TEST_CASE_LIMIT);
 
     if (visibleTestCases.length === 0) {
       const rawResult = await executePiston(language, code, stdin || "");

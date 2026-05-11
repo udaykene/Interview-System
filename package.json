@@ -6,7 +6,9 @@
   "scripts": {
     "build": "npm install --prefix Backend && npm install --prefix Frontend --include=dev && npm run build --prefix Frontend",
     "start":"npm run start --prefix Backend",
-    "piston:install": "node scripts/install-piston-runtimes.mjs"
+    "piston:install": "node scripts/install-piston-runtimes.mjs",
+    "problems:export": "node scripts/export-problems-bulk-import.mjs",
+    "problems:validate": "node scripts/validate-problem-bulk-import.mjs"
   },
   "repository": {
     "type": "git",
