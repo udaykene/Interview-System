@@ -43,9 +43,7 @@ const UserSchema = new mongoose.Schema(
     },
     providerId: {
       type: String,
-      default: null,
-      unique: true,
-      sparse: true,
+      trim: true,
     },
     role: {
       type: String,
@@ -107,6 +105,16 @@ const UserSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+  }
+);
+
+UserSchema.index(
+  { providerId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      providerId: { $type: "string" },
+    },
   }
 );
 
