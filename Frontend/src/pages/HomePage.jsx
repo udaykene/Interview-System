@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContextState";
 import { motion } from "framer-motion";
-import { ArrowRight, Terminal, Zap, Users, Code2, Shield } from "lucide-react";
+import { Terminal, Zap, Users, Code2, Shield } from "lucide-react";
 
 const codeSnippet = `function twoSum(nums, target) {
   const map = new Map();
@@ -54,6 +54,24 @@ const features = [
     title: "Curated Problems",
     desc: "Hand-picked interview problems organized by difficulty, topic, and company tags.",
     mono: "DSA",
+  },
+];
+
+const workflow = [
+  {
+    step: "01",
+    title: "Choose the right problem set",
+    desc: "Practice by topic, difficulty, or session goal instead of solving random questions.",
+  },
+  {
+    step: "02",
+    title: "Open a live room and solve together",
+    desc: "Bring in a partner, explain your thinking out loud, and code in a shared interview setup.",
+  },
+  {
+    step: "03",
+    title: "Run, review, and improve the answer",
+    desc: "Use fast execution feedback to refine correctness, edge cases, and communication.",
   },
 ];
 
@@ -153,19 +171,22 @@ const HomePage = () => {
 
       {/* ─── HERO ─────────────────────────────────────────────── */}
       <div
-        className="mesh-gradient"
+        className="mesh-gradient render-hero-surface"
         style={{ position: "relative", overflow: "hidden" }}
       >
+        <div className="render-hero-accent" />
         <div
           style={{
             padding:
-              "clamp(80px, 8vw, 160px) clamp(20px, 4vw, 48px) clamp(60px, 8vw, 100px)",
+              "clamp(56px, 7vw, 116px) clamp(20px, 4vw, 48px) clamp(60px, 8vw, 100px)",
             maxWidth: 1300,
             margin: "0 auto",
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "clamp(40px, 6vw, 80px)",
+            gridTemplateColumns: "minmax(0, 0.9fr) minmax(0, 1.1fr)",
+            gap: "clamp(28px, 5vw, 56px)",
             alignItems: "center",
+            position: "relative",
+            zIndex: 1,
           }}
         >
           {/* LEFT — Copy */}
@@ -187,10 +208,10 @@ const HomePage = () => {
                   fontFamily: "'JetBrains Mono', monospace",
                   fontSize: 11,
                   fontWeight: 600,
-                  color: "var(--accent-violet-light)",
+                  color: "#c995ff",
                   letterSpacing: "0.08em",
-                  background: "rgba(124,91,240,0.1)",
-                  border: "1px solid rgba(124,91,240,0.2)",
+                  background: "rgba(138,5,255,0.08)",
+                  border: "1px solid rgba(138,5,255,0.18)",
                   borderRadius: 99,
                   padding: "5px 14px",
                 }}
@@ -205,12 +226,19 @@ const HomePage = () => {
               animate="visible"
               custom={1}
               className="heading-xl"
+              style={{
+                fontSize: "clamp(2.65rem, 5vw, 4.2rem)",
+                lineHeight: 0.96,
+                fontWeight: 400,
+                letterSpacing: "-0.05em",
+                maxWidth: 620,
+              }}
             >
               <span style={{ color: "#ffffff" }}>Your fastest path to</span>
               <br />
-              <span style={{ color: "#ffffff" }}>mastery for</span>
+              <span style={{ color: "#ffffff" }}>production for</span>
               <br />
-              <span className="text-stroke" style={{ fontWeight: 700 }}>
+              <span className="render-gradient-text" style={{ fontWeight: 400 }}>
                 coding interviews.
               </span>
             </motion.h1>
@@ -221,16 +249,16 @@ const HomePage = () => {
               animate="visible"
               custom={2}
               style={{
-                fontSize: 17,
+                fontSize: 16,
                 color: "var(--text-secondary)",
                 lineHeight: 1.7,
                 margin: 0,
-                maxWidth: 480,
+                maxWidth: 520,
                 fontWeight: 400,
               }}
             >
-              Intuitive real-time collaboration to scale any interview — from
-              your first practice run to your dream job.
+              Intuitive interview infrastructure to scale every practice round
+              from your first mock session to your best performance.
             </motion.p>
 
             <motion.div
@@ -315,16 +343,29 @@ const HomePage = () => {
             initial="hidden"
             animate="visible"
             style={{
-              background: "rgba(255,255,255,0.02)",
-              border: "1px solid rgba(255,255,255,0.06)",
-              borderRadius: 16,
-              padding: 0,
               position: "relative",
               overflow: "hidden",
-              boxShadow:
-                "0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(124,91,240,0.05)",
+              minHeight: 540,
             }}
           >
+            <div className="render-grid-overlay" />
+            {/* <div className="render-command-chip">$ git push</div> */}
+            <div className="render-connector-line" />
+            <div
+              style={{
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(255,255,255,0.06)",
+                borderRadius: 0,
+                padding: 0,
+                position: "absolute",
+                right: 0,
+                bottom: 34,
+                width: "min(100%, 640px)",
+                overflow: "hidden",
+                boxShadow:
+                  "0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(138,5,255,0.04)",
+              }}
+            >
             {/* Terminal header */}
             <div
               style={{
@@ -369,7 +410,7 @@ const HomePage = () => {
                   letterSpacing: "0.04em",
                 }}
               >
-                two-sum.js
+                production
               </span>
             </div>
 
@@ -390,7 +431,7 @@ const HomePage = () => {
                     __html: codeSnippet
                       .replace(
                         /function|const|let|for|if|return/g,
-                        '<span style="color: #c792ea">$&</span>',
+                        '<span style="color: #c995ff">$&</span>',
                       )
                       .replace(
                         /twoSum|Map|set|has|get/g,
@@ -450,6 +491,7 @@ const HomePage = () => {
                 ALL TESTS PASSED
               </span>
             </motion.div>
+            </div>
           </motion.div>
         </div>
       </div>
@@ -472,11 +514,11 @@ const HomePage = () => {
             marginBottom: "clamp(40px, 6vw, 72px)",
           }}
         >
-          <span
-            className="mono-label"
-            style={{ marginBottom: 16, display: "block" }}
-          >
-            FEATURES
+            <span
+              className="mono-label"
+              style={{ marginBottom: 16, display: "block" }}
+            >
+              FEATURES
           </span>
           <h2
             className="heading-lg"
@@ -525,12 +567,12 @@ const HomePage = () => {
                   width: 42,
                   height: 42,
                   borderRadius: 12,
-                  background: "rgba(124,91,240,0.08)",
-                  border: "1px solid rgba(124,91,240,0.15)",
+                  background: "rgba(138,5,255,0.08)",
+                  border: "1px solid rgba(138,5,255,0.15)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: "#9b7bff",
+                  color: "#c995ff",
                   marginBottom: 20,
                 }}
               >
@@ -567,6 +609,108 @@ const HomePage = () => {
         </div>
       </div>
 
+      <div
+        style={{
+          maxWidth: 1300,
+          margin: "0 auto",
+          padding: "0 clamp(20px, 4vw, 48px) clamp(70px, 8vw, 110px)",
+        }}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="render-workflow-grid"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 0.95fr) minmax(0, 1.05fr)",
+            gap: 24,
+          }}
+        >
+          <div
+            className="card-glow render-workflow-intro"
+            style={{
+              padding: "clamp(26px, 4vw, 36px)",
+              background: "rgba(255,255,255,0.02)",
+              borderColor: "rgba(138,5,255,0.1)",
+            }}
+          >
+            <span className="mono-label" style={{ marginBottom: 14, display: "block" }}>
+              WORKFLOW
+            </span>
+            <h2 className="heading-lg" style={{ color: "white", marginBottom: 14 }}>
+              Practice in the same flow you want on interview day.
+            </h2>
+            <p
+              style={{
+                fontSize: 15,
+                color: "var(--text-secondary)",
+                lineHeight: 1.75,
+                maxWidth: 480,
+              }}
+            >
+              CodeArena keeps problems, live collaboration, code execution, and
+              review close together so each practice round feels focused.
+            </p>
+          </div>
+
+          <div style={{ display: "grid", gap: 14 }}>
+            {workflow.map((item, index) => (
+              <motion.div
+                key={item.step}
+                initial={{ opacity: 0, y: 18 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.08, duration: 0.45 }}
+                className="card-glow render-workflow-card"
+                style={{
+                  padding: "22px 24px",
+                  display: "grid",
+                  gridTemplateColumns: "56px 1fr",
+                  gap: 18,
+                  alignItems: "start",
+                  background: "rgba(255,255,255,0.02)",
+                }}
+              >
+                <div
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 18,
+                    color: "#c995ff",
+                    letterSpacing: "-0.03em",
+                  }}
+                >
+                  {item.step}
+                </div>
+                <div>
+                  <h3
+                    style={{
+                      fontSize: 18,
+                      fontWeight: 600,
+                      color: "white",
+                      marginBottom: 8,
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    {item.title}
+                  </h3>
+                  <p
+                    style={{
+                      fontSize: 14,
+                      color: "var(--text-secondary)",
+                      lineHeight: 1.7,
+                    }}
+                  >
+                    {item.desc}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+
       {/* ─── CTA SECTION ──────────────────────────────────────── */}
       <div
         style={{
@@ -584,8 +728,8 @@ const HomePage = () => {
           style={{
             padding: "clamp(40px, 6vw, 72px)",
             textAlign: "center",
-            background: "rgba(124,91,240,0.03)",
-            borderColor: "rgba(124,91,240,0.12)",
+            background: "rgba(138,5,255,0.03)",
+            borderColor: "rgba(138,5,255,0.12)",
           }}
         >
           <span

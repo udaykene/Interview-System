@@ -6,8 +6,8 @@
   --color-deep-black: #050505;
   --color-surface: #0a0a0a;
   --color-surface-elevated: #111111;
-  --color-violet: #7c5bf0;
-  --color-violet-light: #9b7bff;
+  --color-violet: #8a05ff;
+  --color-violet-light: #c995ff;
   --color-indigo: #818cf8;
   --color-border-subtle: rgba(255, 255, 255, 0.08);
   --color-border-glow: rgba(124, 91, 240, 0.4);
@@ -28,8 +28,8 @@
   --bg-card-hover: rgba(255, 255, 255, 0.06);
   --bg-border: rgba(255, 255, 255, 0.08);
 
-  --accent-violet: #7c5bf0;
-  --accent-violet-light: #9b7bff;
+  --accent-violet: #8a05ff;
+  --accent-violet-light: #c995ff;
   --accent-indigo: #818cf8;
   --accent-blue: #3b82f6;
   --accent-cyan: #06b6d4;
@@ -45,15 +45,15 @@
 
   --border-primary: #fff6;
 
-  --glow-violet: rgba(124, 91, 240, 0.15);
+  --glow-violet: rgba(138, 5, 255, 0.14);
   --glow-indigo: rgba(129, 140, 248, 0.12);
   --glow-green: rgba(16, 185, 129, 0.15);
 
   --gradient-brand: linear-gradient(
     135deg,
-    #7c5bf0 0%,
-    #818cf8 50%,
-    #9b7bff 100%
+    #8a05ff 0%,
+    #b05cff 55%,
+    #f3e8ff 100%
   );
   --gradient-card: linear-gradient(
     145deg,
@@ -62,16 +62,16 @@
   );
   --gradient-glow-border: linear-gradient(
     135deg,
-    rgba(124, 91, 240, 0.5),
-    rgba(129, 140, 248, 0.1),
-    rgba(124, 91, 240, 0.3)
+    rgba(138, 5, 255, 0.45),
+    rgba(176, 92, 255, 0.12),
+    rgba(138, 5, 255, 0.24)
   );
 
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.7);
-  --shadow-glow: 0 0 30px rgba(124, 91, 240, 0.12);
-  --shadow-glow-strong: 0 0 50px rgba(124, 91, 240, 0.2);
+  --shadow-glow: 0 0 30px rgba(138, 5, 255, 0.12);
+  --shadow-glow-strong: 0 0 50px rgba(138, 5, 255, 0.18);
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -962,10 +962,9 @@ body {
 /* ─── Mesh Gradient Hero ──────────────────────────────────── */
 .mesh-gradient {
   background:
-    radial-gradient(at 27% 37%, rgba(124, 91, 240, 0.12) 0px, transparent 50%),
-    radial-gradient(at 97% 21%, rgba(129, 140, 248, 0.08) 0px, transparent 50%),
-    radial-gradient(at 52% 99%, rgba(124, 91, 240, 0.06) 0px, transparent 50%),
-    radial-gradient(at 10% 29%, rgba(155, 123, 255, 0.04) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(138, 5, 255, 0.12) 0px, transparent 36%),
+    radial-gradient(at 18% 12%, rgba(138, 5, 255, 0.05) 0px, transparent 22%),
+    radial-gradient(at 70% 10%, rgba(138, 5, 255, 0.025) 0px, transparent 18%);
 }
 
 /* ─── Code Block ──────────────────────────────────────────── */
@@ -1255,3 +1254,148 @@ body {
   max-width: 480px;
   box-shadow: 0 32px 64px rgba(0, 0, 0, 0.6);
 }
+
+.render-hero-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: min(34vw, 460px);
+  height: min(28vw, 320px);
+  background: linear-gradient(135deg, rgba(138, 5, 255, 0.22), rgba(138, 5, 255, 0.03));
+  pointer-events: none;
+}
+
+.render-hero-accent {
+  position: absolute;
+  left: clamp(40px, 7vw, 130px);
+  top: clamp(240px, 34vw, 440px);
+  width: 38px;
+  height: 90px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(138, 5, 255, 0.24));
+  pointer-events: none;
+}
+
+.render-gradient-text {
+  background: linear-gradient(180deg, #ffffff 0%, #e7d7ff 56%, #bf86ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.render-grid-overlay {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-size: 118px 118px;
+  mask-image: linear-gradient(90deg, transparent 4%, #000 26%);
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+.render-command-chip {
+  position: absolute;
+  top: 96px;
+  left: 72px;
+  z-index: 2;
+  padding: 18px 22px;
+  background: #d8d8da;
+  color: #111;
+  font-family: "JetBrains Mono", monospace;
+  font-size: clamp(0.95rem, 1.4vw, 1.15rem);
+  letter-spacing: 0.01em;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.22);
+}
+
+.render-connector-line {
+  position: absolute;
+  top: 150px;
+  left: 130px;
+  width: 1px;
+  height: 80px;
+  background: #8a05ff;
+  box-shadow: 56px 80px 0 #8a05ff;
+  pointer-events: none;
+}
+
+.render-workflow-intro,
+.render-workflow-card {
+  border-radius: 0;
+}
+
+@media (max-width: 980px) {
+  .render-workflow-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .render-grid-overlay {
+    mask-image: linear-gradient(180deg, transparent 0%, #000 18%);
+  }
+
+  .render-command-chip {
+    left: 16px;
+    top: 26px;
+  }
+
+  .render-connector-line {
+    left: 82px;
+    top: 80px;
+    height: 58px;
+    box-shadow: 40px 58px 0 #8a05ff;
+  }
+}
+
+@media (max-width: 760px) {
+  .render-hero-surface::before {
+    width: 220px;
+    height: 180px;
+  }
+
+  .render-hero-accent {
+    left: 24px;
+    top: 240px;
+    width: 26px;
+    height: 70px;
+  }
+
+  .render-command-chip {
+    padding: 14px 16px;
+  }
+
+  .render-workflow-card {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Admin Dashboard Styles */
+.hover-row {
+  transition: background 0.15s;
+}
+.hover-row:hover {
+  background: rgba(255,255,255,0.02) !important;
+}
+.hover-row td {
+  transition: color 0.15s;
+}
+.hover-row:hover td {
+  color: var(--text-primary);
+}
+
+.mono-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--accent-purple);
+  text-transform: uppercase;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+

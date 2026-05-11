@@ -12,7 +12,7 @@ import ProblemPage from "./pages/ProblemPage";
 import ProblemsPage from "./pages/ProblemsPage";
 import SessionPage from "./pages/SessionsPage";
 import ProfilePage from "./pages/ProfilePage";
-import AdminProblemsPage from "./pages/AdminProblemsPage";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
 import JoinRedirectPage from "./pages/JoinRedirectPage";
 import { useAuth } from "./context/AuthContextState";
 import { Toaster } from "react-hot-toast";
@@ -21,14 +21,14 @@ function App() {
   const { isSignedIn, isLoaded } = useAuth();
 
   // Spotlight cursor tracker
-  useEffect(() => {
-    const handler = (e) => {
-      document.documentElement.style.setProperty('--mouse-x', `${e.clientX}px`);
-      document.documentElement.style.setProperty('--mouse-y', `${e.clientY}px`);
-    };
-    window.addEventListener('mousemove', handler);
-    return () => window.removeEventListener('mousemove', handler);
-  }, []);
+  // useEffect(() => {
+  //   const handler = (e) => {
+  //     document.documentElement.style.setProperty('--mouse-x', `${e.clientX}px`);
+  //     document.documentElement.style.setProperty('--mouse-y', `${e.clientY}px`);
+  //   };
+  //   window.addEventListener('mousemove', handler);
+  //   return () => window.removeEventListener('mousemove', handler);
+  // }, []);
 
   if (!isLoaded) {
     return (
@@ -65,7 +65,8 @@ function App() {
         <Route path="/session/join/:code" element={isSignedIn ? <JoinRedirectPage /> : <Navigate to="/login" />} />
         
         {/* Admin Route */}
-        <Route path="/admin/problems" element={isSignedIn ? <AdminProblemsPage /> : <Navigate to="/login" />} />
+        <Route path="/admin" element={isSignedIn ? <AdminDashboardPage /> : <Navigate to="/login" />} />
+        <Route path="/admin/problems" element={<Navigate to="/admin" replace />} />
         
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>

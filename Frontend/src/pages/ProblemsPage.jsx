@@ -122,7 +122,7 @@ function ProblemsPage() {
 
         <main className="problems-content" style={{ padding: '24px 32px' }}>
           {/* Header Tabs */}
-          <div style={{ display: 'flex', gap: 24, marginBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+          {/* <div style={{ display: 'flex', gap: 24, marginBottom: 24, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
             {[
               { id: 'library', label: 'Problems', icon: <BookOpen size={16} /> },
               { id: 'users', label: 'Users', icon: <Users size={16} /> },
@@ -153,7 +153,7 @@ function ProblemsPage() {
                 {tab.label}
               </button>
             ))}
-          </div>
+          </div> */}
 
           <AnimatePresence mode="wait">
             <motion.div

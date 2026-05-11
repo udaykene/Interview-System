@@ -4,7 +4,7 @@ function ProblemsSidebar({ activeView, setActiveView, playlists = [] }) {
   const mainItems = [
     { id: "library", label: "Library", icon: <BookOpen size={18} /> },
     { id: "quest", label: "Quest", icon: <Flame size={18} />, badge: "New" },
-    { id: "explore", label: "Explore", icon: <Compass size={18} /> },
+    
     { id: "study-plan", label: "Study Plan", icon: <GraduationCap size={18} /> },
   ];
 

@@ -29,6 +29,19 @@ export const useCreateProblem = () => {
   });
 };
 
+export const useUpdateProblem = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ slug, payload }) => problemsApi.update(slug, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["problems"] });
+      qc.invalidateQueries({ queryKey: ["problem"] });
+      toast.success("Problem updated");
+    },
+    onError: (err) => toast.error(err.response?.data?.message || "Failed to update problem"),
+  });
+};
+
 export const useBulkImportProblems = () => {
   const qc = useQueryClient();
   return useMutation({

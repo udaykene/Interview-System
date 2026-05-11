@@ -12,7 +12,7 @@ function StudyPlanView() {
     <div className="study-plan-view">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 40 }}>
         <h1 style={{ fontSize: 32, fontWeight: 800 }}>Study Plan</h1>
-        <button className="btn-secondary" style={{ borderRadius: 12, padding: '8px 16px', fontSize: 13 }}>
+        <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 4, borderRadius: 12, padding: '8px 16px', fontSize: 13 }}>
           My Study Plan <ChevronRight size={14} style={{ marginLeft: 4 }} />
         </button>
       </div>

@@ -243,36 +243,39 @@ function Navbar() {
 
       {/* Nav Links */}
       <div className="md-hidden" style={{ display: "flex", gap: 4, flex: 1 }}>
-        <NavLink
-          to="/problems"
-          icon={<BookOpen size={14} />}
-          active={isActive("/problems") || isActive("/problem")}
-        >
-          Problems
-        </NavLink>
-        <NavLink
-          to={interviewHref}
-          icon={<Users size={14} />}
-          active={isActive("/interview")}
-          newTab
-        >
-          Interview
-        </NavLink>
-        <NavLink
-          to="/dashboard"
-          icon={<BarChart3 size={14} />}
-          active={isActive("/dashboard")}
-        >
-          Dashboard
-        </NavLink>
-        {user?.role === "admin" && (
+        {user?.role === "admin" ? (
           <NavLink
-            to="/admin/problems"
+            to="/admin"
             icon={<Shield size={14} />}
-            active={isActive("/admin/problems")}
+            active={isActive("/admin")}
           >
-            Admin
+            Admin Panel
           </NavLink>
+        ) : (
+          <>
+            <NavLink
+              to="/problems"
+              icon={<BookOpen size={14} />}
+              active={isActive("/problems") || isActive("/problem")}
+            >
+              Problems
+            </NavLink>
+            <NavLink
+              to={interviewHref}
+              icon={<Users size={14} />}
+              active={isActive("/interview")}
+              newTab
+            >
+              Interview
+            </NavLink>
+            <NavLink
+              to="/dashboard"
+              icon={<BarChart3 size={14} />}
+              active={isActive("/dashboard")}
+            >
+              Dashboard
+            </NavLink>
+          </>
         )}
       </div>
 
@@ -436,52 +439,55 @@ function Navbar() {
                   </div>
                 </div>
                 <div style={{ padding: 6 }}>
-                  <DropdownItem
-                    icon={<User size={14} />}
-                    onClick={() => {
-                      navigate(`/profile`);
-                      setDropdownOpen(false);
-                    }}
-                  >
-                    My Profile
-                  </DropdownItem>
-                  <DropdownItem
-                    icon={<BarChart3 size={14} />}
-                    onClick={() => {
-                      navigate("/dashboard");
-                      setDropdownOpen(false);
-                    }}
-                  >
-                    Dashboard
-                  </DropdownItem>
-                  <DropdownItem
-                    icon={<Users size={14} />}
-                    onClick={() => {
-                      window.open(interviewHref, "_blank", "noopener,noreferrer");
-                      setDropdownOpen(false);
-                    }}
-                  >
-                    Interview
-                  </DropdownItem>
-                  <DropdownItem
-                    icon={<BookOpen size={14} />}
-                    onClick={() => {
-                      navigate("/problems");
-                      setDropdownOpen(false);
-                    }}
-                  >
-                    Problems
-                  </DropdownItem>
-                  {user?.role === "admin" && (
+                  {user?.role === "admin" ? (
                     <DropdownItem
                       icon={<Shield size={14} />}
                       onClick={() => {
-                        navigate("/admin/problems");
+                        navigate("/admin");
                         setDropdownOpen(false);
                       }}
                     >
                       Admin Panel
                     </DropdownItem>
+                  ) : (
+                    <>
+                      <DropdownItem
+                        icon={<User size={14} />}
+                        onClick={() => {
+                          navigate(`/profile`);
+                          setDropdownOpen(false);
+                        }}
+                      >
+                        My Profile
+                      </DropdownItem>
+                      <DropdownItem
+                        icon={<BarChart3 size={14} />}
+                        onClick={() => {
+                          navigate("/dashboard");
+                          setDropdownOpen(false);
+                        }}
+                      >
+                        Dashboard
+                      </DropdownItem>
+                      <DropdownItem
+                        icon={<Users size={14} />}
+                        onClick={() => {
+                          window.open(interviewHref, "_blank", "noopener,noreferrer");
+                          setDropdownOpen(false);
+                        }}
+                      >
+                        Interview
+                      </DropdownItem>
+                      <DropdownItem
+                        icon={<BookOpen size={14} />}
+                        onClick={() => {
+                          navigate("/problems");
+                          setDropdownOpen(false);
+                        }}
+                      >
+                        Problems
+                      </DropdownItem>
+                    </>
                   )}
                   <div
                     style={{
