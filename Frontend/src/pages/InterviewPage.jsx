@@ -1,10 +1,14 @@
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router";
 import { useActiveSessions, useCreateSession, useEndSession, useMyRecentSessions } from "../hooks/useSessions";
 import { useAuth } from "../context/AuthContextState";
 import Navbar from "../components/Navbar";
 import CreateSessionModal from "../components/CreateSessionModal";
-import { motion } from "framer-motion";
+import EndSessionConfirmModal from "../components/EndSessionConfirmModal";
+
+
+
 import {
   Plus, Hash, Zap, Users, Clock, ChevronRight,
   BookOpen, Code2, Activity, Loader2, ArrowRight, Sparkles, LogOut
@@ -49,9 +53,26 @@ function InterviewPage() {
   const isUserInSession = (session) => session.host?._id === user?.id || session.participant?._id === user?.id;
   const isHost = (session) => session.host?._id === user?.id;
 
+  const [confirmEndOpen, setConfirmEndOpen] = useState(false);
+  const [pendingEndSessionId, setPendingEndSessionId] = useState(null);
+
+
+
   const handleEndSession = (sessionId) => {
-    if (!window.confirm("End this session for all participants?")) return;
-    endSessionMutation.mutate(sessionId);
+    setPendingEndSessionId(sessionId);
+    setConfirmEndOpen(true);
+  };
+
+  const confirmEndSession = () => {
+    if (!pendingEndSessionId) return;
+    endSessionMutation.mutate(pendingEndSessionId);
+    setConfirmEndOpen(false);
+    setPendingEndSessionId(null);
+  };
+
+  const cancelEndSession = () => {
+    setConfirmEndOpen(false);
+    setPendingEndSessionId(null);
   };
 
   const hour = new Date().getHours();
@@ -208,6 +229,13 @@ function InterviewPage() {
         setRoomConfig={setRoomConfig}
         onCreateRoom={handleCreateRoom}
         isCreating={createSessionMutation.isPending}
+      />
+
+      <EndSessionConfirmModal
+        isOpen={confirmEndOpen}
+        onCancel={cancelEndSession}
+        onConfirm={confirmEndSession}
+        isConfirming={endSessionMutation.isPending}
       />
     </div>
   );

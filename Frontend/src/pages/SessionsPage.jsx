@@ -8,6 +8,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { Loader2, LogOut, Code2, Users, AlertCircle, Play, CheckCircle2, Copy } from "lucide-react";
 import CodeEditorPanel from "../components/CodeEditorPanel";
 import OutputPanel from "../components/OutputPanel";
+import EndSessionConfirmModal from "../components/EndSessionConfirmModal";
 import useStreamClient from "../hooks/useStreamClient";
 import { StreamCall, StreamVideo } from "@stream-io/video-react-sdk";
 import VideoCallUI from "../components/VideoCallUI";
@@ -59,7 +60,7 @@ function SessionPage() {
     if (isHost || isParticipant) return;
     if (session.visibility === "private" && !joinCode && !searchParams.get("code")) return;
     joinSessionMutation.mutate({ id, code: searchParams.get("code") || joinCode }, { onSuccess: refetch });
-  }, [session, user, loadingSession, isHost, isParticipant, id, searchParams, joinCode]);
+  }, [session, user, loadingSession, isHost, isParticipant, id, searchParams, joinCode, joinSessionMutation, refetch]);
 
   useEffect(() => {
     if (!session || loadingSession) return;
@@ -96,7 +97,7 @@ function SessionPage() {
       if (savedCode) { setCode(savedCode); }
       else if (problem.starterCode?.[session.selectedLanguage || selectedLanguage]) { setCode(problem.starterCode[session.selectedLanguage || selectedLanguage]); }
     }
-  }, [session, problem]);
+  }, [session, problem, selectedLanguage]);
 
   const handleLanguageChange = (e) => {
     const newLang = e.target.value;
@@ -135,10 +136,24 @@ function SessionPage() {
     } finally { setIsSubmitting(false); }
   };
 
+  const [confirmEndOpen, setConfirmEndOpen] = useState(false);
+
   const handleEndSession = () => {
-    if (window.confirm("End this session for all participants?")) {
-      endSessionMutation.mutate(id, { onSuccess: () => { disconnectSocket(); navigate("/dashboard"); } });
-    }
+    setConfirmEndOpen(true);
+  };
+
+  const confirmEndSession = () => {
+    endSessionMutation.mutate(id, {
+      onSuccess: () => {
+        disconnectSocket();
+        navigate("/dashboard");
+      },
+    });
+    setConfirmEndOpen(false);
+  };
+
+  const cancelEndSession = () => {
+    setConfirmEndOpen(false);
   };
 
   const getDifficultyColor = (diff) => {
@@ -158,6 +173,13 @@ function SessionPage() {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#050505' }}>
       <Navbar />
+
+      <EndSessionConfirmModal
+        isOpen={confirmEndOpen}
+        onCancel={cancelEndSession}
+        onConfirm={confirmEndSession}
+        isConfirming={endSessionMutation.isPending}
+      />
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <PanelGroup direction="horizontal">
           {/* LEFT: PROBLEM & EDITOR */}
