@@ -161,7 +161,7 @@ function ActivityChart({ stats = {} }) {
 function PracticeHistoryTable() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
-  const { data, isLoading } = useUserHistory(page);
+  const { data, isLoading } = useUserHistory(undefined, page);
 
   const submissions = data?.submissions || [];
   const totalPages = data?.totalPages || 1;

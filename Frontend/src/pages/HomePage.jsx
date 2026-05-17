@@ -83,7 +83,7 @@ const HomePage = () => {
       style={{
         minHeight: "100vh",
         background: "#050505",
-        overflowX: "hidden",
+        // overflowX: "hidden",
         color: "#e8eaed",
         fontFamily: "'Geist', sans-serif",
       }}

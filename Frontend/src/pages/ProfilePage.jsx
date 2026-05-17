@@ -247,7 +247,7 @@ function ProfilePage() {
     fetchProfile();
   }, [targetUsername, navigate, isOwnProfile, currentUser]);
 
-  const stats = profileUser?.stats || {};
+  const stats = statsData || profileUser?.stats || {};
   // const favorites = profileUser?.favorites || [];
 
   const [form, setForm] = useState({

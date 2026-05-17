@@ -15,7 +15,11 @@ export const useUserActivity = (username) => {
   });
 };
 
-export const useUserHistory = (username, page = 1, limit = 20) => {
+export const useUserHistory = (usernameOrPage, pageOrLimit = 1, maybeLimit = 20) => {
+  const username = typeof usernameOrPage === "string" ? usernameOrPage : undefined;
+  const page = typeof usernameOrPage === "number" ? usernameOrPage : pageOrLimit;
+  const limit = typeof usernameOrPage === "number" ? maybeLimit : maybeLimit;
+
   return useQuery({
     queryKey: ["userHistory", username, page, limit],
     queryFn: () => statsApi.getHistory(username, page, limit),
