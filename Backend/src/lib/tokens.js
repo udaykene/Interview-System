@@ -24,14 +24,14 @@ export const hashToken = (token) => {
 
 export const accessCookieOptions = (isProd) => ({
   httpOnly: true,
-  sameSite: "lax",
+  sameSite: isProd ? "none" : "lax",
   secure: isProd,
   maxAge: 1000 * 60 * 60,
 });
 
 export const refreshCookieOptions = (isProd) => ({
   httpOnly: true,
-  sameSite: "lax",
+  sameSite: isProd ? "none" : "lax",
   secure: isProd,
   maxAge: 1000 * 60 * 60 * 24 * 7,
 });

@@ -50,7 +50,7 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: isProd ? "none" : "lax",
       secure: isProd,
       maxAge: 1000 * 60 * 10,
     },
