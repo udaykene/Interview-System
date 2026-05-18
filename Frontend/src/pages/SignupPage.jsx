@@ -5,7 +5,8 @@ import { motion } from "framer-motion";
 import axiosInstance from "../lib/axios";
 import toast from "react-hot-toast";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+const rawApiUrl = (import.meta.env.VITE_API_URL || "http://localhost:3000").trim();
+const BACKEND_URL = rawApiUrl.replace(/\/api\/?$/i, "").replace(/\/+$/, "");
 
 function SignupPage() {
   const [form, setForm] = useState({ email: "", password: "" });

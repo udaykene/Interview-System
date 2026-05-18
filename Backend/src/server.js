@@ -132,12 +132,8 @@ io.on("connection", (socket) => {
 });
 
 // ─── Production Static Serve ─────────────────────
-if (isProd) {
-  app.use(express.static(path.join(__dirname, "../Frontend", "dist")));
-  app.get("/{*any}", (req, res) => {
-    res.sendFile(path.join(__dirname, "../Frontend", "dist", "index.html"));
-  });
-}
+// Removed static serve because Frontend is hosted separately on Vercel
+
 
 // ─── Start Server ────────────────────────────────
 const startServer = async () => {
