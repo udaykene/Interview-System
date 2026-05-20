@@ -31,32 +31,33 @@ export const issueTokens = async (res, user) => {
 export const handleOAuthCallback = async (req, res) => {
   const user = req.user;
   await issueTokens(res, user);
-  // Upsert to Stream after OAuth
   await upsertStreamUser({ id: user._id.toString(), name: user.name, image: user.profileImage });
   res.redirect(`${ENV.CLIENT_URL}/problems`);
 };
 
-// ─────────────────────────────────────────────
 // Local Auth: Register
-// ─────────────────────────────────────────────
 export const register = async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password)
+  if (!email || !password) {
     return res.status(400).json({ message: "Email and password are required" });
-  if (password.length < 6)
+  }
+  if (password.length < 6) {
     return res.status(400).json({ message: "Password must be at least 6 characters" });
+  }
 
   try {
     const normalizedEmail = email.toLowerCase().trim();
     const existing = await User.findOne({ email: normalizedEmail });
-    if (existing) return res.status(409).json({ message: "Email already registered" });
+    if (existing) {
+      return res.status(409).json({ message: "Email already registered" });
+    }
 
     const name = resolveDisplayName({ email: normalizedEmail });
     const passwordHash = await bcrypt.hash(password, 12);
     const verificationToken = crypto.randomBytes(32).toString("hex");
     const username = await generateUsername(name);
     const adminEmailSet = new Set(
-      ENV.ADMIN_EMAILS.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean)
+      ENV.ADMIN_EMAILS.split(",").map((entry) => entry.trim().toLowerCase()).filter(Boolean)
     );
 
     const user = await User.create({
@@ -71,13 +72,15 @@ export const register = async (req, res) => {
       role: adminEmailSet.has(normalizedEmail) ? "admin" : "user",
     });
 
-    // Run email delivery and Stream user sync asynchronously in the background
-    sendVerificationEmail(user, verificationToken).catch((err) => {
-      console.error("❌ Background email verification error:", err);
-    });
-    upsertStreamUser({ id: user._id.toString(), name: user.name, image: user.profileImage }).catch((err) => {
-      console.error("❌ Background Stream user sync error:", err);
-    });
+    try {
+      await sendVerificationEmail(user, verificationToken);
+    } catch (emailError) {
+      await User.findByIdAndDelete(user._id);
+      console.error("Verification email failed during registration:", emailError.message);
+      return res.status(503).json({
+        message: "We could not send the verification email. Please check the mail settings and try again.",
+      });
+    }
 
     res.status(201).json({ message: "Account created! Please check your email to verify your account." });
   } catch (error) {
@@ -86,21 +89,23 @@ export const register = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────
 // Local Auth: Login
-// ─────────────────────────────────────────────
 export const login = async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password)
+  if (!email || !password) {
     return res.status(400).json({ message: "Email and password are required" });
+  }
 
   try {
     const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user || user.provider !== "local")
+    if (!user || user.provider !== "local") {
       return res.status(401).json({ message: "Invalid email or password" });
+    }
 
     const valid = await user.comparePassword(password);
-    if (!valid) return res.status(401).json({ message: "Invalid email or password" });
+    if (!valid) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
 
     if (!user.emailVerified) {
       return res.status(403).json({
@@ -130,9 +135,7 @@ export const login = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────
 // Verify Email
-// ─────────────────────────────────────────────
 export const verifyEmail = async (req, res) => {
   const { token } = req.params;
   try {
@@ -140,12 +143,18 @@ export const verifyEmail = async (req, res) => {
       emailVerificationToken: token,
       emailVerificationExpires: { $gt: new Date() },
     });
-    if (!user) return res.status(400).json({ message: "Invalid or expired verification token" });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired verification token" });
+    }
 
     user.emailVerified = true;
     user.emailVerificationToken = null;
     user.emailVerificationExpires = null;
     await user.save();
+
+    upsertStreamUser({ id: user._id.toString(), name: user.name, image: user.profileImage }).catch((err) => {
+      console.error("Background Stream user sync error:", err);
+    });
 
     res.status(200).json({ message: "Email verified successfully! You can now log in." });
   } catch (error) {
@@ -154,27 +163,28 @@ export const verifyEmail = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────
 // Forgot Password
-// ─────────────────────────────────────────────
 export const forgotPassword = async (req, res) => {
   const { email } = req.body;
-  if (!email) return res.status(400).json({ message: "Email is required" });
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
+  }
 
   try {
     const user = await User.findOne({ email: email.toLowerCase(), provider: "local" });
-    // Always return 200 to avoid user enumeration
-    if (!user) return res.status(200).json({ message: "If an account exists, a reset link has been sent." });
+    if (!user) {
+      return res.status(200).json({ message: "If an account exists, a reset link has been sent." });
+    }
 
     const token = crypto.randomBytes(32).toString("hex");
     user.passwordResetToken = crypto.createHash("sha256").update(token).digest("hex");
-    user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000);
     await user.save();
 
-    // Run password reset email asynchronously in the background
     sendPasswordResetEmail(user, token).catch((err) => {
-      console.error("❌ Background password reset email error:", err);
+      console.error("Background password reset email error:", err);
     });
+
     res.status(200).json({ message: "If an account exists, a reset link has been sent." });
   } catch (error) {
     console.error("Error in forgotPassword:", error);
@@ -182,14 +192,13 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────
 // Reset Password
-// ─────────────────────────────────────────────
 export const resetPassword = async (req, res) => {
   const { token } = req.params;
   const { password } = req.body;
-  if (!password || password.length < 6)
+  if (!password || password.length < 6) {
     return res.status(400).json({ message: "Password must be at least 6 characters" });
+  }
 
   try {
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
@@ -197,12 +206,14 @@ export const resetPassword = async (req, res) => {
       passwordResetToken: hashedToken,
       passwordResetExpires: { $gt: new Date() },
     });
-    if (!user) return res.status(400).json({ message: "Invalid or expired reset token" });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired reset token" });
+    }
 
     user.password = await bcrypt.hash(password, 12);
     user.passwordResetToken = null;
     user.passwordResetExpires = null;
-    user.refreshTokenHash = null; // invalidate refresh tokens
+    user.refreshTokenHash = null;
     await user.save();
 
     res.status(200).json({ message: "Password reset successfully! You can now log in." });
@@ -212,9 +223,7 @@ export const resetPassword = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────
 // Get Current User
-// ─────────────────────────────────────────────
 export const getMe = async (req, res) => {
   const user = req.user;
   res.status(200).json({
@@ -234,9 +243,7 @@ export const getMe = async (req, res) => {
   });
 };
 
-// ─────────────────────────────────────────────
 // Update Profile
-// ─────────────────────────────────────────────
 export const updateProfile = async (req, res) => {
   const { name, username, bio, profileImage, socialLinks } = req.body;
   const userId = req.user._id;
@@ -246,7 +253,9 @@ export const updateProfile = async (req, res) => {
 
     if (username) {
       const existing = await User.findOne({ username: username.toLowerCase(), _id: { $ne: userId } });
-      if (existing) return res.status(409).json({ message: "Username already taken" });
+      if (existing) {
+        return res.status(409).json({ message: "Username already taken" });
+      }
     }
 
     if (name !== undefined && !normalizedName) {
@@ -274,7 +283,6 @@ export const updateProfile = async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    // Sync name/image to Stream
     await upsertStreamUser({
       id: userId.toString(),
       name: updated.name,
@@ -302,17 +310,19 @@ export const updateProfile = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────
 // Refresh Tokens
-// ─────────────────────────────────────────────
 export const refreshTokens = async (req, res) => {
   const token = req.cookies?.refresh_token;
-  if (!token) return res.status(401).json({ message: "Unauthorized" });
+  if (!token) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
 
   try {
     const payload = jwt.verify(token, ENV.JWT_REFRESH_SECRET);
     const user = await User.findById(payload.sub);
-    if (!user) return res.status(401).json({ message: "Unauthorized" });
+    if (!user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
 
     if (user.refreshTokenHash !== hashToken(token)) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -325,9 +335,7 @@ export const refreshTokens = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────
 // Logout
-// ─────────────────────────────────────────────
 export const logout = async (req, res) => {
   const isProd = ENV.NODE_ENV === "production";
   const token = req.cookies?.refresh_token;
@@ -339,14 +347,13 @@ export const logout = async (req, res) => {
       // ignore
     }
   }
+
   res.clearCookie("access_token", accessCookieOptions(isProd));
   res.clearCookie("refresh_token", refreshCookieOptions(isProd));
   res.status(200).json({ ok: true });
 };
 
-// ─────────────────────────────────────────────
 // Public User Profile & Follow
-// ─────────────────────────────────────────────
 export const getUserProfile = async (req, res) => {
   const { username } = req.params;
   try {
@@ -354,7 +361,9 @@ export const getUserProfile = async (req, res) => {
       .select("name username email profileImage bio stats socialLinks role createdAt followers following")
       .populate("favorites", "title slug difficulty acceptanceRate");
 
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
     res.status(200).json({
       user: {
@@ -381,7 +390,7 @@ export const getUserProfile = async (req, res) => {
 };
 
 export const toggleFollow = async (req, res) => {
-  const { userId } = req.params; // ID of the user to follow/unfollow
+  const { userId } = req.params;
   const myId = req.user._id;
 
   if (userId === myId.toString()) {
@@ -399,11 +408,9 @@ export const toggleFollow = async (req, res) => {
     const isFollowing = currentUser.following.includes(userId);
 
     if (isFollowing) {
-      // Unfollow
-      currentUser.following = currentUser.following.filter(id => id.toString() !== userId);
-      targetUser.followers = targetUser.followers.filter(id => id.toString() !== myId.toString());
+      currentUser.following = currentUser.following.filter((id) => id.toString() !== userId);
+      targetUser.followers = targetUser.followers.filter((id) => id.toString() !== myId.toString());
     } else {
-      // Follow
       currentUser.following.push(userId);
       targetUser.followers.push(myId);
     }
@@ -425,16 +432,19 @@ export const getFollowers = async (req, res) => {
   try {
     const user = await User.findOne({ username: username.toLowerCase() })
       .populate("followers", "id name username profileImage");
-    
-    if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Mark each follower if current user is following them
-    const followers = user.followers.map(f => ({
-      id: f._id.toString(),
-      name: f.name,
-      username: f.username,
-      profileImage: f.profileImage,
-      isFollowing: req.user ? req.user.following.some(id => id.toString() === f._id.toString()) : false,
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const followers = user.followers.map((follower) => ({
+      id: follower._id.toString(),
+      name: follower.name,
+      username: follower.username,
+      profileImage: follower.profileImage,
+      isFollowing: req.user
+        ? req.user.following.some((id) => id.toString() === follower._id.toString())
+        : false,
     }));
 
     res.status(200).json({ followers });
@@ -449,15 +459,17 @@ export const getFollowing = async (req, res) => {
   try {
     const user = await User.findOne({ username: username.toLowerCase() })
       .populate("following", "id name username profileImage");
-    
-    if (!user) return res.status(404).json({ message: "User not found" });
 
-    const following = user.following.map(f => ({
-      id: f._id.toString(),
-      name: f.name,
-      username: f.username,
-      profileImage: f.profileImage,
-      isFollowing: true, // They are in the following list, so we must be following them
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const following = user.following.map((followedUser) => ({
+      id: followedUser._id.toString(),
+      name: followedUser.name,
+      username: followedUser.username,
+      profileImage: followedUser.profileImage,
+      isFollowing: true,
     }));
 
     res.status(200).json({ following });
