@@ -71,8 +71,13 @@ export const register = async (req, res) => {
       role: adminEmailSet.has(normalizedEmail) ? "admin" : "user",
     });
 
-    await sendVerificationEmail(user, verificationToken);
-    await upsertStreamUser({ id: user._id.toString(), name: user.name, image: user.profileImage });
+    // Run email delivery and Stream user sync asynchronously in the background
+    sendVerificationEmail(user, verificationToken).catch((err) => {
+      console.error("❌ Background email verification error:", err);
+    });
+    upsertStreamUser({ id: user._id.toString(), name: user.name, image: user.profileImage }).catch((err) => {
+      console.error("❌ Background Stream user sync error:", err);
+    });
 
     res.status(201).json({ message: "Account created! Please check your email to verify your account." });
   } catch (error) {
@@ -166,7 +171,10 @@ export const forgotPassword = async (req, res) => {
     user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
     await user.save();
 
-    await sendPasswordResetEmail(user, token);
+    // Run password reset email asynchronously in the background
+    sendPasswordResetEmail(user, token).catch((err) => {
+      console.error("❌ Background password reset email error:", err);
+    });
     res.status(200).json({ message: "If an account exists, a reset link has been sent." });
   } catch (error) {
     console.error("Error in forgotPassword:", error);
