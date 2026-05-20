@@ -1,11 +1,26 @@
 import nodemailer from "nodemailer";
 import { ENV } from "./env.js";
 
+const getEmailConfigError = () => {
+  if (!ENV.EMAIL_SMTP_USER || !ENV.EMAIL_SMTP_PASS) {
+    return "Email SMTP credentials are missing. Set EMAIL_SMTP_USER and EMAIL_SMTP_PASS on the backend host.";
+  }
+
+  if (ENV.EMAIL_SMTP_HOST === "smtp.gmail.com" && ENV.EMAIL_SMTP_PASS.replace(/\s+/g, "").length !== 16) {
+    return "Gmail SMTP requires a 16-character App Password, not your normal Gmail password.";
+  }
+
+  return null;
+};
+
 const createTransporter = async () => {
-  let host = ENV.EMAIL_SMTP_HOST || "smtp.gmail.com";
+  const configError = getEmailConfigError();
+  if (configError) {
+    throw new Error(configError);
+  }
 
   return nodemailer.createTransport({
-    host,
+    host: ENV.EMAIL_SMTP_HOST || "smtp.gmail.com",
     port: parseInt(ENV.EMAIL_SMTP_PORT || "587", 10),
     secure: parseInt(ENV.EMAIL_SMTP_PORT || "587", 10) === 465,
     auth: {
@@ -166,3 +181,5 @@ export const sendPasswordResetEmail = async (user, token) => {
     throw err;
   }
 };
+
+export { getEmailConfigError };

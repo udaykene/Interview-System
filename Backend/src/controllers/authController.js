@@ -10,7 +10,7 @@ import {
   accessCookieOptions,
   refreshCookieOptions,
 } from "../lib/tokens.js";
-import { sendVerificationEmail, sendPasswordResetEmail } from "../lib/emailService.js";
+import { getEmailConfigError, sendVerificationEmail, sendPasswordResetEmail } from "../lib/emailService.js";
 import { upsertStreamUser } from "../lib/stream.js";
 import { generateUsername, resolveDisplayName, normalizeDisplayName } from "../lib/userIdentity.js";
 import { resolveProfileImageUpdate } from "../lib/cloudinary.js";
@@ -43,6 +43,11 @@ export const register = async (req, res) => {
   }
   if (password.length < 6) {
     return res.status(400).json({ message: "Password must be at least 6 characters" });
+  }
+
+  const emailConfigError = getEmailConfigError();
+  if (emailConfigError) {
+    return res.status(503).json({ message: emailConfigError });
   }
 
   try {
@@ -78,7 +83,7 @@ export const register = async (req, res) => {
       await User.findByIdAndDelete(user._id);
       console.error("Verification email failed during registration:", emailError.message);
       return res.status(503).json({
-        message: "We could not send the verification email. Please check the mail settings and try again.",
+        message: emailError.message || "We could not send the verification email. Please check the mail settings and try again.",
       });
     }
 
