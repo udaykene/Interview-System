@@ -12,7 +12,7 @@ import { Channel, Chat, MessageInput, MessageList, Thread, Window } from "stream
 import "@stream-io/video-react-sdk/dist/css/styles.css";
 import "stream-chat-react/dist/css/v2/index.css";
 
-function VideoCallUI({ chatClient, channel }) {
+function VideoCallUI({ chatClient, channel, onLeave }) {
   const navigate = useNavigate();
   const { useCallCallingState, useParticipantCount } = useCallStateHooks();
   const callingState = useCallCallingState();
@@ -65,7 +65,7 @@ function VideoCallUI({ chatClient, channel }) {
           borderTop: '1px solid rgba(255,255,255,0.06)',
           display: 'flex', justifyContent: 'center'
         }}>
-          <CallControls onLeave={() => navigate("/dashboard")} />
+          <CallControls onLeave={onLeave || (() => navigate("/interview"))} />
         </div>
       </div>
 

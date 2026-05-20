@@ -217,9 +217,11 @@ export async function endSession(req, res) {
 
     if (!session) return res.status(404).json({ message: "Session not found" });
 
-    // check if user is the host
-    if (session.host.toString() !== userId.toString()) {
-      return res.status(403).json({ message: "Only the host can end the session" });
+    // check if user is the host or participant
+    const isHost = session.host.toString() === userId.toString();
+    const isParticipant = session.participant?.toString() === userId.toString();
+    if (!isHost && !isParticipant) {
+      return res.status(403).json({ message: "Only the host or participant can end the session" });
     }
 
     // check if session is already completed

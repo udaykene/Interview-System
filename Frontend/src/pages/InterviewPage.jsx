@@ -272,7 +272,7 @@ function SessionCard({ session, isOwn, isHost, onJoin, onEnd, isEnding, index })
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, flexShrink: 0, marginLeft: 12 }}>
-          {isHost && (
+          {isOwn && (
             <button
               className="btn btn-sm btn-danger"
               disabled={isEnding}

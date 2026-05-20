@@ -30,7 +30,7 @@ function LoginPage() {
     try {
       await axiosInstance.post("/auth/login", form);
       await refresh();
-      navigate("/dashboard");
+      navigate("/problems");
     } catch (err) {
       const msg = err.response?.data?.message || "Login failed";
       if (err.response?.data?.needsVerification) {

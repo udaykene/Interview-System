@@ -126,6 +126,16 @@ io.on("connection", (socket) => {
     socket.to(sessionId).emit("user-typing", { userId: socket.userId });
   });
 
+  // Broadcast session end to other participants
+  socket.on("session-ended", ({ sessionId }) => {
+    socket.to(sessionId).emit("session-ended");
+  });
+
+  // Notify host when participant leaves
+  socket.on("participant-left", ({ sessionId }) => {
+    socket.to(sessionId).emit("participant-left-notify");
+  });
+
   socket.on("disconnect", () => {
     console.log(`🔌 Socket disconnected: ${socket.id}`);
   });

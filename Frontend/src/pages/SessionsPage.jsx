@@ -64,7 +64,7 @@ function SessionPage() {
 
   useEffect(() => {
     if (!session || loadingSession) return;
-    if (session.status === "completed") navigate("/dashboard", { replace: true });
+    if (session.status === "completed") navigate("/interview", { replace: true });
   }, [session, loadingSession, navigate]);
 
   // Socket.IO
@@ -86,7 +86,21 @@ function SessionPage() {
         typingTimeoutRef.current = setTimeout(() => setRemoteTyping(false), 2000);
       }
     });
-    return () => { socket.off("code-update"); socket.off("language-update"); socket.off("user-typing"); };
+    socket.on("session-ended", () => {
+      toast.success("The session has been ended.");
+      navigate("/interview", { replace: true });
+    });
+    socket.on("participant-left-notify", () => {
+      toast.error("The participant has left the session. They can rejoin later.");
+      refetch();
+    });
+    return () => {
+      socket.off("code-update");
+      socket.off("language-update");
+      socket.off("user-typing");
+      socket.off("session-ended");
+      socket.off("participant-left-notify");
+    };
   }, [id, token, session, loadingSession, isHost, isParticipant, user?.id, selectedLanguage]);
 
   // Initial code
@@ -143,10 +157,11 @@ function SessionPage() {
   };
 
   const confirmEndSession = () => {
+    socketRef.current?.emit("session-ended", { sessionId: id });
     endSessionMutation.mutate(id, {
       onSuccess: () => {
         disconnectSocket();
-        navigate("/dashboard");
+        navigate("/interview");
       },
     });
     setConfirmEndOpen(false);
@@ -154,6 +169,14 @@ function SessionPage() {
 
   const cancelEndSession = () => {
     setConfirmEndOpen(false);
+  };
+
+  const handleLeaveSession = () => {
+    if (isParticipant) {
+      socketRef.current?.emit("participant-left", { sessionId: id });
+    }
+    disconnectSocket();
+    navigate("/interview");
   };
 
   const getDifficultyColor = (diff) => {
@@ -202,11 +225,18 @@ function SessionPage() {
                           {session.visibility === 'private' && <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><AlertCircle size={12} /> PRIVATE</span>}
                         </div>
                       </div>
-                      {isHost && (
-                        <button className="btn btn-sm btn-danger" onClick={handleEndSession} disabled={endSessionMutation.isPending}>
-                          {endSessionMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={13} />} End
-                        </button>
-                      )}
+                      <div style={{ display: "flex", gap: 8 }}>
+                        {isParticipant && (
+                          <button className="btn btn-sm btn-secondary" onClick={handleLeaveSession}>
+                            <LogOut size={13} /> Leave
+                          </button>
+                        )}
+                        {(isHost || isParticipant) && (
+                          <button className="btn btn-sm btn-danger" onClick={handleEndSession} disabled={endSessionMutation.isPending}>
+                            {endSessionMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <LogOut size={13} />} End
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {isHost && session.visibility === 'private' && (
@@ -317,7 +347,7 @@ function SessionPage() {
               ) : (
                 <StreamVideo client={streamClient}>
                   <StreamCall call={call}>
-                    <VideoCallUI chatClient={chatClient} channel={channel} />
+                    <VideoCallUI chatClient={chatClient} channel={channel} onLeave={handleLeaveSession} />
                   </StreamCall>
                 </StreamVideo>
               )}

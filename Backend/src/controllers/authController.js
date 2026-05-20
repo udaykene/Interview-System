@@ -33,7 +33,7 @@ export const handleOAuthCallback = async (req, res) => {
   await issueTokens(res, user);
   // Upsert to Stream after OAuth
   await upsertStreamUser({ id: user._id.toString(), name: user.name, image: user.profileImage });
-  res.redirect(`${ENV.CLIENT_URL}/dashboard`);
+  res.redirect(`${ENV.CLIENT_URL}/problems`);
 };
 
 // ─────────────────────────────────────────────
