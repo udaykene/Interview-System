@@ -1,9 +1,27 @@
 import nodemailer from "nodemailer";
+import dns from "dns";
+import { promisify } from "util";
 import { ENV } from "./env.js";
 
-const createTransporter = () => {
+const lookupPromise = promisify(dns.lookup);
+
+const createTransporter = async () => {
+  let host = ENV.EMAIL_SMTP_HOST || "smtp.gmail.com";
+  let servername = undefined;
+
+  if (host && !host.match(/^[0-9.]+$/)) {
+    try {
+      const result = await lookupPromise(host, { family: 4 });
+      servername = host;
+      host = result.address;
+      console.log(`🔍 DNS resolved ${servername} to IPv4: ${host}`);
+    } catch (dnsErr) {
+      console.error(`❌ DNS resolution failed for ${host}, using hostname directly:`, dnsErr.message);
+    }
+  }
+
   return nodemailer.createTransport({
-    host: ENV.EMAIL_SMTP_HOST || "smtp.gmail.com",
+    host,
     port: parseInt(ENV.EMAIL_SMTP_PORT || "587"),
     secure: false,
     auth: {
@@ -12,6 +30,7 @@ const createTransporter = () => {
     },
     tls: {
       rejectUnauthorized: false,
+      ...(servername && { servername }),
     },
   });
 };
@@ -125,7 +144,7 @@ const emailTemplate = (title, content, buttonText, buttonUrl) => `
 
 export const sendVerificationEmail = async (user, token) => {
   try {
-    const transporter = createTransporter();
+    const transporter = await createTransporter();
     const verifyUrl = `${ENV.CLIENT_URL}/verify-email/${token}`;
     const content = `
       <p style="margin:0 0 16px;">Hi <strong style="color:#a5b4fc;font-weight:600;">${user.name}</strong>,</p>
@@ -146,7 +165,7 @@ export const sendVerificationEmail = async (user, token) => {
 
 export const sendPasswordResetEmail = async (user, token) => {
   try {
-    const transporter = createTransporter();
+    const transporter = await createTransporter();
     const resetUrl = `${ENV.CLIENT_URL}/reset-password/${token}`;
     const content = `
       <p style="margin:0 0 16px;">Hi <strong style="color:#a5b4fc;font-weight:600;">${user.name}</strong>,</p>
