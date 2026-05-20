@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import dns from "dns/promises";
 import { ENV } from "./env.js";
 
 const getEmailConfigError = () => {
@@ -34,6 +35,51 @@ const createTransporter = async () => {
       rejectUnauthorized: false,
     },
   });
+};
+
+const createIpv4Transporter = async () => {
+  const host = ENV.EMAIL_SMTP_HOST || "smtp.gmail.com";
+  const resolved = await dns.lookup(host, { family: 4 });
+
+  return nodemailer.createTransport({
+    host: resolved.address,
+    port: parseInt(ENV.EMAIL_SMTP_PORT || "587", 10),
+    secure: parseInt(ENV.EMAIL_SMTP_PORT || "587", 10) === 465,
+    auth: {
+      user: ENV.EMAIL_SMTP_USER,
+      pass: ENV.EMAIL_SMTP_PASS,
+    },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 20000,
+    tls: {
+      rejectUnauthorized: false,
+      servername: host,
+    },
+  });
+};
+
+const shouldRetryWithIpv4 = (error) => {
+  if (!error) {
+    return false;
+  }
+
+  return ["ENETUNREACH", "EHOSTUNREACH", "ETIMEDOUT"].includes(error.code);
+};
+
+const sendMailWithFallback = async (mailOptions) => {
+  try {
+    const transporter = await createTransporter();
+    return await transporter.sendMail(mailOptions);
+  } catch (error) {
+    if (!shouldRetryWithIpv4(error)) {
+      throw error;
+    }
+
+    console.warn(`SMTP primary route failed with ${error.code}. Retrying over IPv4.`);
+    const ipv4Transporter = await createIpv4Transporter();
+    return await ipv4Transporter.sendMail(mailOptions);
+  }
 };
 
 const emailTemplate = (title, content, buttonText, buttonUrl) => `
@@ -136,7 +182,6 @@ const emailTemplate = (title, content, buttonText, buttonUrl) => `
 
 export const sendVerificationEmail = async (user, token) => {
   try {
-    const transporter = await createTransporter();
     const verifyUrl = `${ENV.CLIENT_URL}/verify-email/${token}`;
     const content = `
       <p style="margin:0 0 16px;">Hi <strong style="color:#a5b4fc;font-weight:600;">${user.name}</strong>,</p>
@@ -144,7 +189,7 @@ export const sendVerificationEmail = async (user, token) => {
       <p style="margin:0 0 24px;color:#cbd5e1;">Please verify your email address to activate your account and start practicing. This link is secure and will expire in <strong style="color:#f87171;">24 hours</strong>.</p>
     `;
 
-    await transporter.sendMail({
+    await sendMailWithFallback({
       from: `"CodeInterview" <${ENV.EMAIL_FROM || ENV.EMAIL_SMTP_USER}>`,
       to: user.email,
       subject: "Verify your CodeInterview account",
@@ -160,7 +205,6 @@ export const sendVerificationEmail = async (user, token) => {
 
 export const sendPasswordResetEmail = async (user, token) => {
   try {
-    const transporter = await createTransporter();
     const resetUrl = `${ENV.CLIENT_URL}/reset-password/${token}`;
     const content = `
       <p style="margin:0 0 16px;">Hi <strong style="color:#a5b4fc;font-weight:600;">${user.name}</strong>,</p>
@@ -168,7 +212,7 @@ export const sendPasswordResetEmail = async (user, token) => {
       <p style="margin:0 0 24px;color:#cbd5e1;">Click the button below to set a new password. For security reasons, this link will expire in <strong style="color:#f87171;">1 hour</strong>. If you did not make this request, you can safely ignore this email.</p>
     `;
 
-    await transporter.sendMail({
+    await sendMailWithFallback({
       from: `"CodeInterview" <${ENV.EMAIL_FROM || ENV.EMAIL_SMTP_USER}>`,
       to: user.email,
       subject: "Reset your CodeInterview password",
