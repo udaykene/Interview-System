@@ -1,4 +1,4 @@
-import { chatClient, streamClient, upsertStreamUser } from "../lib/stream.js";
+import { chatClient, streamClient } from "../lib/stream.js";
 import Session from "../models/Sessions.js";
 import Problem from "../models/Problem.js";
 
@@ -26,12 +26,7 @@ export async function createSession(req, res) {
     const callId = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const joinCode = await generateUniqueJoinCode();
 
-    // Ensure host exists in Stream even if webhook sync was missed.
-    await upsertStreamUser({
-      id: userId.toString(),
-      name: req.user.name,
-      image: req.user.profileImage,
-    });
+
 
     // create session in db
     const session = await Session.create({

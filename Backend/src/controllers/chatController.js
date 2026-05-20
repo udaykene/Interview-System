@@ -1,4 +1,4 @@
-import { chatClient, upsertStreamUser } from "../lib/stream.js"; // this is the stream client
+import { chatClient } from "../lib/stream.js"; // this is the stream client
 
 // this is the route for getting the stream token
 export async function getStreamToken(req, res) {
@@ -6,11 +6,6 @@ export async function getStreamToken(req, res) {
   try {
     // use mongodb user id for Stream
     const streamId = req.user._id.toString();
-    await upsertStreamUser({
-      id: streamId,
-      name: req.user.name,
-      image: req.user.profileImage,
-    });
     const token = chatClient.createToken(streamId);
 
     res
