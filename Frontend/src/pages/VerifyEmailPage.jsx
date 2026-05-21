@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Code2, Check, X, Loader2 } from "lucide-react";
@@ -7,8 +7,15 @@ import axiosInstance from "../lib/axios";
 function VerifyEmailPage() {
   const { token } = useParams();
   const [status, setStatus] = useState("loading"); // loading | success | error
+  const hasVerifiedRef = useRef(false);
 
   useEffect(() => {
+    if (!token || hasVerifiedRef.current) {
+      return;
+    }
+
+    hasVerifiedRef.current = true;
+
     const verify = async () => {
       try {
         await axiosInstance.get(`/auth/verify-email/${token}`);
