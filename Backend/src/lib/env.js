@@ -37,10 +37,7 @@ export const ENV = {
   SERVER_URL: process.env.SERVER_URL || "http://localhost:3000",
   ADMIN_EMAILS: process.env.ADMIN_EMAILS || "udaykene96@gmail.com",
   EMAIL_FROM: process.env.EMAIL_FROM,
-  EMAIL_SMTP_HOST: process.env.EMAIL_SMTP_HOST || "smtp.gmail.com",
-  EMAIL_SMTP_PORT: process.env.EMAIL_SMTP_PORT || "587",
-  EMAIL_SMTP_USER: process.env.EMAIL_SMTP_USER,
-  EMAIL_SMTP_PASS: process.env.EMAIL_SMTP_PASS,
+  RESEND_API_KEY: process.env.RESEND_API_KEY,
   PISTON_API: process.env.PISTON_API || "https://emkc.org/api/v2/piston",
   PISTON_API_KEY: process.env.PISTON_API_KEY,
 };
