@@ -1,19 +1,44 @@
-import { Resend } from "resend";
+import axios from "axios";
 import { ENV } from "./env.js";
 
-const getEmailConfigError = () => {
-  if (!ENV.RESEND_API_KEY) {
-    return "Resend API key is missing. Set RESEND_API_KEY on the backend host.";
+const BREVO_SEND_EMAIL_URL = "https://api.brevo.com/v3/smtp/email";
+
+const parseEmailFrom = (value) => {
+  if (!value) {
+    return null;
   }
-  return null;
+
+  const match = value.match(/^(.*)<(.+)>$/);
+  if (!match) {
+    return {
+      email: value.trim(),
+      name: undefined,
+    };
+  }
+
+  const [, rawName, rawEmail] = match;
+  const name = rawName.trim().replace(/^"|"$/g, "");
+  return {
+    email: rawEmail.trim(),
+    name: name || undefined,
+  };
 };
 
-const getResendClient = () => {
-  const configError = getEmailConfigError();
-  if (configError) {
-    throw new Error(configError);
+const getEmailConfigError = () => {
+  if (!ENV.BREVO_API_KEY) {
+    return "Brevo API key is missing. Set BREVO_API_KEY on the backend host.";
   }
-  return new Resend(ENV.RESEND_API_KEY);
+
+  if (!ENV.EMAIL_FROM) {
+    return 'EMAIL_FROM is missing. Set it like: CodeInterview <your_verified_sender@gmail.com>.';
+  }
+
+  const parsedSender = parseEmailFrom(ENV.EMAIL_FROM);
+  if (!parsedSender?.email) {
+    return "EMAIL_FROM is invalid. Use the format: CodeInterview <your_verified_sender@gmail.com>.";
+  }
+
+  return null;
 };
 
 const emailTemplate = (title, content, buttonText, buttonUrl) => `
@@ -114,9 +139,43 @@ const emailTemplate = (title, content, buttonText, buttonUrl) => `
 </html>
 `;
 
+const sendEmail = async ({ to, subject, html }) => {
+  const configError = getEmailConfigError();
+  if (configError) {
+    throw new Error(configError);
+  }
+
+  const sender = parseEmailFrom(ENV.EMAIL_FROM);
+
+  try {
+    await axios.post(
+      BREVO_SEND_EMAIL_URL,
+      {
+        sender,
+        to: [{ email: to }],
+        subject,
+        htmlContent: html,
+      },
+      {
+        headers: {
+          accept: "application/json",
+          "api-key": ENV.BREVO_API_KEY,
+          "content-type": "application/json",
+        },
+        timeout: 15000,
+      }
+    );
+  } catch (error) {
+    const apiMessage =
+      error.response?.data?.message ||
+      error.response?.data?.code ||
+      error.message;
+    throw new Error(apiMessage);
+  }
+};
+
 export const sendVerificationEmail = async (user, token) => {
   try {
-    const resend = getResendClient();
     const verifyUrl = `${ENV.CLIENT_URL}/verify-email/${token}`;
     const content = `
       <p style="margin:0 0 16px;">Hi <strong style="color:#a5b4fc;font-weight:600;">${user.name}</strong>,</p>
@@ -124,16 +183,11 @@ export const sendVerificationEmail = async (user, token) => {
       <p style="margin:0 0 24px;color:#cbd5e1;">Please verify your email address to activate your account and start practicing. This link is secure and will expire in <strong style="color:#f87171;">24 hours</strong>.</p>
     `;
 
-    const { error } = await resend.emails.send({
-      from: ENV.EMAIL_FROM || "CodeInterview <onboarding@resend.dev>",
-      to: [user.email],
+    await sendEmail({
+      to: user.email,
       subject: "Verify your CodeInterview account",
       html: emailTemplate("Email Verification", content, "Verify Email Address", verifyUrl),
     });
-
-    if (error) {
-      throw new Error(error.message);
-    }
 
     console.log(`Verification email sent to ${user.email}`);
   } catch (err) {
@@ -144,7 +198,6 @@ export const sendVerificationEmail = async (user, token) => {
 
 export const sendPasswordResetEmail = async (user, token) => {
   try {
-    const resend = getResendClient();
     const resetUrl = `${ENV.CLIENT_URL}/reset-password/${token}`;
     const content = `
       <p style="margin:0 0 16px;">Hi <strong style="color:#a5b4fc;font-weight:600;">${user.name}</strong>,</p>
@@ -152,16 +205,11 @@ export const sendPasswordResetEmail = async (user, token) => {
       <p style="margin:0 0 24px;color:#cbd5e1;">Click the button below to set a new password. For security reasons, this link will expire in <strong style="color:#f87171;">1 hour</strong>. If you did not make this request, you can safely ignore this email.</p>
     `;
 
-    const { error } = await resend.emails.send({
-      from: ENV.EMAIL_FROM || "CodeInterview <onboarding@resend.dev>",
-      to: [user.email],
+    await sendEmail({
+      to: user.email,
       subject: "Reset your CodeInterview password",
       html: emailTemplate("Password Reset", content, "Reset Password", resetUrl),
     });
-
-    if (error) {
-      throw new Error(error.message);
-    }
 
     console.log(`Password reset email sent to ${user.email}`);
   } catch (err) {
