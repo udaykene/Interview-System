@@ -1,36 +1,75 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Eye, EyeOff, Check, Code2 } from "lucide-react";
+import { Eye, EyeOff, Check, Code2, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import axiosInstance from "../lib/axios";
-import toast from "react-hot-toast";
 
 const rawApiUrl = (import.meta.env.VITE_API_URL || "http://localhost:3000").trim();
 const BACKEND_URL = rawApiUrl.replace(/\/api\/?$/i, "").replace(/\/+$/, "");
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function SignupPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [formError, setFormError] = useState("");
+
+  const validateForm = () => {
+    const nextErrors = {};
+    const trimmedEmail = form.email.trim();
+
+    if (!trimmedEmail) {
+      nextErrors.email = "Enter your email address.";
+    } else if (!EMAIL_REGEX.test(trimmedEmail)) {
+      nextErrors.email = "Use a valid email address.";
+    }
+
+    if (!form.password) {
+      nextErrors.password = "Enter a password.";
+    } else if (form.password.length < 6) {
+      nextErrors.password = "Password must be at least 6 characters.";
+    }
+
+    return nextErrors;
+  };
+
+  const handleFieldChange = (field, value) => {
+    setForm((current) => ({ ...current, [field]: value }));
+    setFormError("");
+    setFieldErrors((current) => {
+      if (!current[field]) {
+        return current;
+      }
+
+      const nextErrors = { ...current };
+      delete nextErrors[field];
+      return nextErrors;
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const nextErrors = validateForm();
 
-    if (!form.email || !form.password) {
-      return toast.error("Please fill all fields");
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      setFormError("Please fix the highlighted fields and try again.");
+      return;
     }
 
-    if (form.password.length < 6) {
-      return toast.error("Password must be at least 6 characters");
-    }
-
+    setFieldErrors({});
+    setFormError("");
     setLoading(true);
     try {
-      await axiosInstance.post("/auth/register", form);
+      await axiosInstance.post("/auth/register", {
+        email: form.email.trim(),
+        password: form.password,
+      });
       setDone(true);
     } catch (err) {
-      toast.error(err.response?.data?.message || "Registration failed");
+      setFormError(err.response?.data?.message || "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -219,29 +258,39 @@ function SignupPage() {
           </div>
 
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {formError && (
+              <div className="form-error">
+                <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+                <span>{formError}</span>
+              </div>
+            )}
+
             <motion.div className="input-group">
               <label className="input-label">Email</label>
               <input
-                className="input"
+                className={`input ${fieldErrors.email ? "input-error" : ""}`}
                 type="email"
                 placeholder="you@example.com"
                 value={form.email}
-                onChange={(e) => setForm((current) => ({ ...current, email: e.target.value }))}
+                onChange={(e) => handleFieldChange("email", e.target.value)}
                 autoComplete="email"
+                aria-invalid={!!fieldErrors.email}
               />
+              {fieldErrors.email && <p className="field-error">{fieldErrors.email}</p>}
             </motion.div>
 
             <motion.div className="input-group">
               <label className="input-label">Password</label>
               <div style={{ position: "relative" }}>
                 <input
-                  className="input"
+                  className={`input ${fieldErrors.password ? "input-error" : ""}`}
                   type={showPass ? "text" : "password"}
                   value={form.password}
                   placeholder="correct horse battery staple"
-                  onChange={(e) => setForm((current) => ({ ...current, password: e.target.value }))}
+                  onChange={(e) => handleFieldChange("password", e.target.value)}
                   autoComplete="new-password"
                   style={{ paddingRight: 44 }}
+                  aria-invalid={!!fieldErrors.password}
                 />
                 <button
                   type="button"
@@ -260,6 +309,7 @@ function SignupPage() {
                   {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
+              {fieldErrors.password && <p className="field-error">{fieldErrors.password}</p>}
             </motion.div>
 
             <p style={{ fontSize: 10, color: "var(--text-secondary)", lineHeight: 1.6 }}>

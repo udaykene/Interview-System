@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Code2, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, Code2, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import axiosInstance from "../lib/axios";
 import { useAuth } from "../context/AuthContextState";
-import toast from "react-hot-toast";
 
 const rawApiUrl = (import.meta.env.VITE_API_URL || "http://localhost:3000").trim();
 const BACKEND_URL = rawApiUrl.replace(/\/api\/?$/i, "").replace(/\/+$/, "");
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // const fadeUp = (delay = 0) => ({
 //   initial: { opacity: 0, y: 20 },
@@ -21,22 +21,66 @@ function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [formError, setFormError] = useState("");
+
+  const validateForm = () => {
+    const nextErrors = {};
+    const trimmedEmail = form.email.trim();
+
+    if (!trimmedEmail) {
+      nextErrors.email = "Enter your email address.";
+    } else if (!EMAIL_REGEX.test(trimmedEmail)) {
+      nextErrors.email = "Use a valid email address.";
+    }
+
+    if (!form.password) {
+      nextErrors.password = "Enter your password.";
+    }
+
+    return nextErrors;
+  };
+
+  const handleFieldChange = (field, value) => {
+    setForm((current) => ({ ...current, [field]: value }));
+    setFormError("");
+    setFieldErrors((current) => {
+      if (!current[field]) {
+        return current;
+      }
+
+      const nextErrors = { ...current };
+      delete nextErrors[field];
+      return nextErrors;
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.email || !form.password)
-      return toast.error("Please fill all fields");
+    const nextErrors = validateForm();
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      setFormError("Please fix the highlighted fields and try again.");
+      return;
+    }
+
+    setFieldErrors({});
+    setFormError("");
     setLoading(true);
     try {
-      await axiosInstance.post("/auth/login", form);
+      await axiosInstance.post("/auth/login", {
+        email: form.email.trim(),
+        password: form.password,
+      });
       await refresh();
       navigate("/problems");
     } catch (err) {
       const msg = err.response?.data?.message || "Login failed";
       if (err.response?.data?.needsVerification) {
-        toast.error("Please verify your email first. Check your inbox!");
+        setFormError("Please verify your email first. Check your inbox for the verification link.");
       } else {
-        toast.error(msg);
+        setFormError(msg);
       }
     } finally {
       setLoading(false);
@@ -196,32 +240,38 @@ function LoginPage() {
             onSubmit={handleSubmit}
             style={{ display: "flex", flexDirection: "column", gap: 20 }}
           >
+            {formError && (
+              <div className="form-error">
+                <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+                <span>{formError}</span>
+              </div>
+            )}
+
             <motion.div className="input-group">
               <label className="input-label">Email</label>
               <input
-                className="input"
+                className={`input ${fieldErrors.email ? "input-error" : ""}`}
                 type="email"
                 placeholder="you@example.com"
                 value={form.email}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, email: e.target.value }))
-                }
+                onChange={(e) => handleFieldChange("email", e.target.value)}
                 autoComplete="email"
+                aria-invalid={!!fieldErrors.email}
               />
+              {fieldErrors.email && <p className="field-error">{fieldErrors.email}</p>}
             </motion.div>
             <motion.div className="input-group">
               <label className="input-label">Password</label>
               <div style={{ position: "relative" }}>
                 <input
-                  className="input"
+                  className={`input ${fieldErrors.password ? "input-error" : ""}`}
                   type={showPass ? "text" : "password"}
                   value={form.password}
                   placeholder="correct horse battery staple"
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, password: e.target.value }))
-                  }
+                  onChange={(e) => handleFieldChange("password", e.target.value)}
                   autoComplete="current-password"
                   style={{ paddingRight: 44 }}
+                  aria-invalid={!!fieldErrors.password}
                 />
                 <button
                   type="button"
@@ -240,6 +290,7 @@ function LoginPage() {
                   {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
+              {fieldErrors.password && <p className="field-error">{fieldErrors.password}</p>}
             </motion.div>
 
             <motion.button

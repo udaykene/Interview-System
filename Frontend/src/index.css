@@ -534,6 +534,18 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
 }
+.input-error {
+  border-color: rgba(239, 68, 68, 0.45);
+  box-shadow:
+    0 0 0 3px rgba(239, 68, 68, 0.08),
+    0 0 18px rgba(239, 68, 68, 0.08);
+}
+.input-error:focus {
+  border-color: rgba(239, 68, 68, 0.6);
+  box-shadow:
+    0 0 0 3px rgba(239, 68, 68, 0.12),
+    0 0 20px rgba(239, 68, 68, 0.1);
+}
 
 .input-group {
   display: flex;
@@ -544,6 +556,23 @@ body {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
+}
+.form-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  background: linear-gradient(145deg, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.04));
+  border: 1px solid rgba(239, 68, 68, 0.22);
+  color: #f8b4b4;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.field-error {
+  color: #f8b4b4;
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
 }
 
 /* ─── Badges ──────────────────────────────────────────────── */
@@ -1398,4 +1427,3 @@ body {
 .animate-spin {
   animation: spin 1s linear infinite;
 }
-
