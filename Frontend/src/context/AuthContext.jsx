@@ -32,7 +32,7 @@ export function AuthProvider({ children }) {
 
   // Helper to extract JWT token from cookies for Socket.io
   const getToken = () => {
-    const match = document.cookie.match(/(^| )jwt=([^;]+)/);
+    const match = document.cookie.match(/(^| )access_token=([^;]+)/);
     return match ? match[2] : null;
   };
 

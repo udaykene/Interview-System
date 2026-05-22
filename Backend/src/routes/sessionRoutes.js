@@ -8,6 +8,7 @@ import {
   getSessionById,
   joinSession,
   joinSessionByCode,
+  leaveSession,
 } from "../controllers/sessionController.js";
 
 const router = express.Router();
@@ -18,6 +19,7 @@ router.get("/my-recent", protectRoutes, getMyRecentSessions);
 
 router.get("/:id", protectRoutes, getSessionById);
 router.post("/:id/join", protectRoutes, joinSession);
+router.post("/:id/leave", protectRoutes, leaveSession);
 router.post("/join-by-code", protectRoutes, joinSessionByCode);
 router.post("/:id/end", protectRoutes, endSession);
 

@@ -76,3 +76,19 @@ export const useEndSession = () => {
 
   return result;
 };
+
+export const useLeaveSession = () => {
+  const qc = useQueryClient();
+  const result = useMutation({
+    mutationKey: ["leaveSession"],
+    mutationFn: sessionApi.leaveSession,
+    onSuccess: (_, sessionId) => {
+      qc.invalidateQueries({ queryKey: ["activeSessions"] });
+      qc.invalidateQueries({ queryKey: ["session", sessionId] });
+      toast.success("Left session successfully!");
+    },
+    onError: (error) => toast.error(error.response?.data?.message || "Failed to leave session"),
+  });
+
+  return result;
+};

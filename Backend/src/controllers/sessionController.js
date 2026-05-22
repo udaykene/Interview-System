@@ -190,6 +190,35 @@ export async function joinSessionByCode(req, res) {
   }
 }
 
+export async function leaveSession(req, res) {
+  try {
+    const { id } = req.params;
+    const userId = req.user._id.toString();
+
+    const session = await Session.findById(id);
+    if (!session) return res.status(404).json({ message: "Session not found" });
+
+    if (session.status !== "active") {
+      return res.status(400).json({ message: "Cannot leave a completed session" });
+    }
+
+    if (session.participant?.toString() !== userId) {
+      return res.status(403).json({ message: "Only the current participant can leave this session" });
+    }
+
+    session.participant = null;
+    await session.save();
+
+    const channel = chatClient.channel("messaging", session.callId);
+    await channel.removeMembers([userId]);
+
+    res.status(200).json({ session, message: "Session left successfully" });
+  } catch (error) {
+    console.log("Error in leaveSession controller:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
 async function generateUniqueJoinCode() {
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   for (let i = 0; i < 5; i += 1) {

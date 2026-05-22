@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useEndSession, useJoinSession, useSessionById } from "../hooks/useSessions";
+import { useEndSession, useJoinSession, useLeaveSession, useSessionById } from "../hooks/useSessions";
 import { useProblem } from "../hooks/useProblems";
 import { useAuth } from "../context/AuthContextState";
 import Navbar from "../components/Navbar";
@@ -38,6 +38,7 @@ function SessionPage() {
 
   const joinSessionMutation = useJoinSession();
   const endSessionMutation = useEndSession();
+  const leaveSessionMutation = useLeaveSession();
   
   const isHost = session?.host?._id === user?.id;
   const isParticipant = session?.participant?._id === user?.id;
@@ -172,11 +173,19 @@ function SessionPage() {
   };
 
   const handleLeaveSession = () => {
-    if (isParticipant) {
-      socketRef.current?.emit("participant-left", { sessionId: id });
+    if (!isParticipant) {
+      disconnectSocket();
+      navigate("/interview");
+      return;
     }
-    disconnectSocket();
-    navigate("/interview");
+
+    leaveSessionMutation.mutate(id, {
+      onSuccess: () => {
+        socketRef.current?.emit("participant-left", { sessionId: id });
+        disconnectSocket();
+        navigate("/interview");
+      },
+    });
   };
 
   const getDifficultyColor = (diff) => {
@@ -227,7 +236,7 @@ function SessionPage() {
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>
                         {isParticipant && (
-                          <button className="btn btn-sm btn-secondary" onClick={handleLeaveSession}>
+                          <button className="btn btn-sm btn-secondary" onClick={handleLeaveSession} disabled={leaveSessionMutation.isPending}>
                             <LogOut size={13} /> Leave
                           </button>
                         )}
