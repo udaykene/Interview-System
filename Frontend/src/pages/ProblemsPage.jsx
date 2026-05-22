@@ -14,7 +14,12 @@ import { Loader2, BookOpen, Users, Star, Code2, LayoutDashboard } from "lucide-r
 
 function ProblemsPage() {
   const { user } = useAuth();
-  const { data: problemsData, isLoading: problemsLoading } = useProblems();
+  const {
+    data: problemsData,
+    isLoading: problemsLoading,
+    isError: problemsError,
+    error: problemsErrorDetails,
+  } = useProblems();
   const { data: favData } = useFavorites();
   const { data: playlistsData } = usePlaylists();
   
@@ -62,6 +67,17 @@ function ProblemsPage() {
       return (
         <div style={{ height: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Loader2 size={32} className="animate-spin" color="var(--accent-violet)" />
+        </div>
+      );
+    }
+
+    if (problemsError) {
+      return (
+        <div className="card" style={{ maxWidth: 520, margin: '64px auto', padding: 28 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>Problems failed to load</h2>
+          <p style={{ color: 'var(--text-muted)', lineHeight: 1.7 }}>
+            {problemsErrorDetails?.response?.data?.message || "The problems library request failed. Please refresh and try again."}
+          </p>
         </div>
       );
     }

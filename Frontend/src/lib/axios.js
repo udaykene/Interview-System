@@ -14,14 +14,29 @@ const axiosInstance = axios.create({
   withCredentials: true,
 });
 
+let refreshRequest = null;
+
 axiosInstance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const original = error.config;
-    if (error.response?.status === 401 && !original._retry && !original.url.includes("/auth/refresh")) {
+
+    if (!original) {
+      return Promise.reject(error);
+    }
+
+    const originalUrl = original.url || "";
+    if (error.response?.status === 401 && !original._retry && !originalUrl.includes("/auth/refresh")) {
       original._retry = true;
+
       try {
-        await axiosInstance.post("/auth/refresh");
+        if (!refreshRequest) {
+          refreshRequest = axiosInstance.post("/auth/refresh").finally(() => {
+            refreshRequest = null;
+          });
+        }
+
+        await refreshRequest;
         return axiosInstance(original);
       } catch {
         return Promise.reject(error);
