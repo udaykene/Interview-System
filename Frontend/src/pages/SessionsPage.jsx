@@ -23,6 +23,7 @@ function SessionPage() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const { user, token } = useAuth();
+  const codeParam = searchParams.get("code")?.toUpperCase() || "";
   
   const [output, setOutput] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
@@ -57,6 +58,7 @@ function SessionPage() {
   const typingTimeoutRef = useRef(null);
   const selectedLanguageRef = useRef("javascript");
   const initializedSessionRef = useRef(null);
+  const joinAttemptKeyRef = useRef(null);
 
   const code = sharedCodeByLanguage[selectedLanguage] || "";
 
@@ -66,16 +68,34 @@ function SessionPage() {
 
   // Auto-join logic
   useEffect(() => {
-    const codeParam = searchParams.get("code");
-    if (codeParam) setJoinCode(codeParam.toUpperCase());
-  }, [searchParams]);
+    if (codeParam) setJoinCode(codeParam);
+  }, [codeParam]);
 
   useEffect(() => {
     if (!session || !user || loadingSession) return;
     if (isHost || isParticipant) return;
-    if (session.visibility === "private" && !joinCode && !searchParams.get("code")) return;
-    joinSessionMutation.mutate({ id, code: searchParams.get("code") || joinCode }, { onSuccess: refetch });
-  }, [session, user, loadingSession, isHost, isParticipant, id, searchParams, joinCode, joinSessionMutation, refetch]);
+    if (joinSessionMutation.isPending) return;
+
+    const inviteCode = codeParam || joinCode;
+    if (session.visibility === "private" && !inviteCode) return;
+
+    const joinAttemptKey = `${id}:${user.id}:${inviteCode}`;
+    if (joinAttemptKeyRef.current === joinAttemptKey) return;
+
+    joinAttemptKeyRef.current = joinAttemptKey;
+    joinSessionMutation.mutate(
+      { id, code: inviteCode },
+      {
+        onSuccess: () => {
+          refetch();
+        },
+        onError: () => {
+          // Prevent infinite retry spam for the same failing invite link.
+          joinAttemptKeyRef.current = joinAttemptKey;
+        },
+      }
+    );
+  }, [session, user, loadingSession, isHost, isParticipant, id, codeParam, joinCode, joinSessionMutation, refetch]);
 
   useEffect(() => {
     if (!session || loadingSession) return;
