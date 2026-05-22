@@ -16,6 +16,8 @@ import getSocket, { disconnectSocket } from "../lib/socket";
 import axiosInstance from "../lib/axios";
 import toast from "react-hot-toast";
 
+const SESSION_LANGUAGES = ["javascript", "python", "java"];
+
 function SessionPage() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -27,7 +29,11 @@ function SessionPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [joinCode, setJoinCode] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
-  const [code, setCode] = useState("");
+  const [sharedCodeByLanguage, setSharedCodeByLanguage] = useState({
+    javascript: "",
+    python: "",
+    java: "",
+  });
   const [remoteTyping, setRemoteTyping] = useState(false);
 
   const { data: sessionData, isLoading: loadingSession, refetch } = useSessionById(id);
@@ -49,6 +55,14 @@ function SessionPage() {
 
   const socketRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const selectedLanguageRef = useRef("javascript");
+  const initializedSessionRef = useRef(null);
+
+  const code = sharedCodeByLanguage[selectedLanguage] || "";
+
+  useEffect(() => {
+    selectedLanguageRef.current = selectedLanguage;
+  }, [selectedLanguage]);
 
   // Auto-join logic
   useEffect(() => {
@@ -75,7 +89,10 @@ function SessionPage() {
     socketRef.current = socket;
     socket.emit("join-session", { sessionId: id });
     socket.on("code-update", ({ code: newCode, language: newLang, from }) => {
-      if (from !== user.id) { setCode(newCode); if (newLang !== selectedLanguage) setSelectedLanguage(newLang); }
+      if (from !== user.id) {
+        setSharedCodeByLanguage((prev) => ({ ...prev, [newLang]: newCode || "" }));
+        if (newLang !== selectedLanguageRef.current) setSelectedLanguage(newLang);
+      }
     });
     socket.on("language-update", ({ language: newLang, from }) => {
       if (from !== user.id) setSelectedLanguage(newLang);
@@ -102,30 +119,58 @@ function SessionPage() {
       socket.off("session-ended");
       socket.off("participant-left-notify");
     };
-  }, [id, token, session, loadingSession, isHost, isParticipant, user?.id, selectedLanguage]);
+  }, [id, token, session, loadingSession, isHost, isParticipant, user?.id, navigate, refetch]);
 
-  // Initial code
   useEffect(() => {
-    if (session && problem) {
-      if (session.selectedLanguage) setSelectedLanguage(session.selectedLanguage);
-      const savedCode = session.sharedCode?.[session.selectedLanguage || selectedLanguage];
-      if (savedCode) { setCode(savedCode); }
-      else if (problem.starterCode?.[session.selectedLanguage || selectedLanguage]) { setCode(problem.starterCode[session.selectedLanguage || selectedLanguage]); }
+    if (!session) return;
+
+    const isNewSession = initializedSessionRef.current !== session._id;
+
+    setSharedCodeByLanguage((prev) => {
+      const next = isNewSession
+        ? { javascript: "", python: "", java: "" }
+        : { ...prev };
+
+      for (const language of SESSION_LANGUAGES) {
+        const persistedCode = session.sharedCode?.[language] || "";
+        const starterCode = problem?.starterCode?.[language] || "";
+        const currentCode = next[language] || "";
+
+        if (isNewSession || !currentCode) {
+          next[language] = persistedCode || starterCode;
+        }
+      }
+
+      return next;
+    });
+
+    if (isNewSession && session.selectedLanguage) {
+      setSelectedLanguage(session.selectedLanguage);
     }
-  }, [session, problem, selectedLanguage]);
+
+    initializedSessionRef.current = session._id;
+  }, [session, problem]);
 
   const handleLanguageChange = (e) => {
     const newLang = e.target.value;
     setSelectedLanguage(newLang);
-    const newCode = session?.sharedCode?.[newLang] || problem?.starterCode?.[newLang] || "";
-    setCode(newCode); setOutput(null);
+    setSharedCodeByLanguage((prev) => {
+      if (prev[newLang]) return prev;
+      return {
+        ...prev,
+        [newLang]: session?.sharedCode?.[newLang] || problem?.starterCode?.[newLang] || "",
+      };
+    });
+    const newCode = sharedCodeByLanguage[newLang] || session?.sharedCode?.[newLang] || problem?.starterCode?.[newLang] || "";
+    setOutput(null);
     socketRef.current?.emit("language-change", { sessionId: id, language: newLang });
     socketRef.current?.emit("code-change", { sessionId: id, code: newCode, language: newLang });
   };
 
   const handleCodeChange = (val) => {
-    setCode(val);
-    socketRef.current?.emit("code-change", { sessionId: id, code: val, language: selectedLanguage });
+    const nextCode = val || "";
+    setSharedCodeByLanguage((prev) => ({ ...prev, [selectedLanguageRef.current]: nextCode }));
+    socketRef.current?.emit("code-change", { sessionId: id, code: nextCode, language: selectedLanguageRef.current });
     socketRef.current?.emit("typing", { sessionId: id });
   };
 
