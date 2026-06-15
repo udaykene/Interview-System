@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
@@ -119,7 +119,7 @@ export const login = async (req, res) => {
       });
     }
 
-    await issueTokens(res, user);
+    await issueTokens( res, user);
     res.status(200).json({
       user: {
         id: user._id.toString(),
