@@ -83,7 +83,7 @@ function ProblemsPage() {
     }
 
     if (activeView === "study-plan") {
-      return <StudyPlanView />;
+      return <StudyPlanView problems={problems} />;
     }
 
     if (activeView === "favorites") {

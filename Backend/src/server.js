@@ -20,6 +20,7 @@ import executeRoutes from "./routes/executeRoutes.js";
 import statsRoutes from "./routes/statsRoutes.js";
 import playlistRoutes from "./routes/playlistRoutes.js";
 import searchRoutes from "./routes/searchRoutes.js";
+import studyPlanRoutes from "./routes/studyPlanRoutes.js";
 import jwt from "jsonwebtoken";
 import Session from "./models/Sessions.js";
 
@@ -70,6 +71,7 @@ app.use("/api/execute", executeRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/playlists", playlistRoutes);
 app.use("/api/search", searchRoutes);
+app.use("/api/study-plans", studyPlanRoutes);
 
 app.get("/health", (req, res) => {
   res.status(200).json({ msg: "OK" });
