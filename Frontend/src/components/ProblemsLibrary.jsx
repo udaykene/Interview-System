@@ -11,45 +11,25 @@ function ProblemsLibrary({ problems, favoriteIds, onToggleFavorite, isSolved, on
   const [users, setUsers] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
 
-  // Extract real topics/categories and their counts from the actual problems
-  const { categories, categoryCounts } = useMemo(() => {
-    const counts = {};
-    const cats = new Set(["All Topics"]); // "All Topics" is always the default first option
+  const topics = useMemo(() => {
+    const topicMap = new Map();
 
     problems.forEach(problem => {
-      // Use the 'category' field if present, or fallback to the first tag, or "Uncategorized"
-      const mainCategory = problem.category || (problem.tags && problem.tags.length > 0 ? problem.tags[0] : "Uncategorized");
-      cats.add(mainCategory);
-      counts[mainCategory] = (counts[mainCategory] || 0) + 1;
-      
-      // Also extract and count all tags for the secondary tag row
-      if (problem.tags && Array.isArray(problem.tags)) {
-          problem.tags.forEach(tag => {
-              counts[tag] = (counts[tag] || 0) + 1;
-          });
-      }
+      const problemTopics = new Set([
+        problem.category || "Uncategorized",
+        ...(Array.isArray(problem.tags) ? problem.tags : []),
+      ].filter(Boolean));
+
+      problemTopics.forEach(topic => {
+        topicMap.set(topic, (topicMap.get(topic) || 0) + 1);
+      });
     });
 
-    // Sort categories alphabetically (after "All Topics")
-    const sortedCategories = Array.from(cats).sort((a, b) => {
-        if (a === "All Topics") return -1;
-        if (b === "All Topics") return 1;
-        return a.localeCompare(b);
-    });
-
-    return { categories: sortedCategories, categoryCounts: counts };
+    return [
+      ["All Topics", problems.length],
+      ...Array.from(topicMap.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])),
+    ];
   }, [problems]);
-
-  // Extract top tags for the row of tags above the category chips
-  const topTags = useMemo(() => {
-      // Get all tags that aren't the main categories we just extracted (to avoid duplication if we want)
-      // For simplicity, we just take the top 10 most frequent tags
-      const tagEntries = Object.entries(categoryCounts)
-          .filter(([tag]) => tag !== "All Topics")
-          .sort((a, b) => b[1] - a[1]); // Sort by count descending
-      
-      return tagEntries.slice(0, 10); // Take top 10
-  }, [categoryCounts]);
 
 
   // Fetch users if activeView is 'users'
@@ -174,37 +154,9 @@ function ProblemsLibrary({ problems, favoriteIds, onToggleFavorite, isSolved, on
          {/* Featured cards content */}
       </div>
 
-      {/* Top Tags */}
-      <div style={{ display: 'flex', gap: 20, marginBottom: 32, overflowX: 'auto', paddingBottom: 8 }}>
-         {topTags.map(([tag, count]) => (
-           <div 
-             key={tag} 
-             onClick={() => setActiveCategory(tag)}
-             style={{ 
-                 display: 'flex', 
-                 alignItems: 'center', 
-                 gap: 6, 
-                 fontSize: 13, 
-                 color: activeCategory === tag ? 'var(--text-primary)' : 'var(--text-secondary)', 
-                 whiteSpace: 'nowrap',
-                 cursor: 'pointer',
-                 padding: '4px 8px',
-                 borderRadius: 8,
-                 background: activeCategory === tag ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-                 transition: 'all 0.2s'
-             }}
-           >
-             <span style={{ fontWeight: activeCategory === tag ? 600 : 400 }}>{tag}</span>
-             <span style={{ fontSize: 11, background: activeCategory === tag ? 'var(--accent-violet)' : 'rgba(255,255,255,0.08)', padding: '2px 8px', borderRadius: 99, color: activeCategory === tag ? 'white' : 'inherit' }}>
-                 {count}
-             </span>
-           </div>
-         ))}
-      </div>
-
-      {/* Category Chips */}
+      {/* Topic Filters */}
       <div className="category-chips">
-        {categories.map(cat => (
+        {topics.map(([cat, count]) => (
           <button 
             key={cat} 
             className={`chip ${activeCategory === cat ? "active" : ""}`}
@@ -212,16 +164,14 @@ function ProblemsLibrary({ problems, favoriteIds, onToggleFavorite, isSolved, on
             style={{ display: 'flex', alignItems: 'center', gap: 6 }}
           >
             <span>{cat}</span>
-            {cat !== "All Topics" && (
-                <span style={{ 
-                    fontSize: 10, 
-                    background: activeCategory === cat ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.1)', 
-                    padding: '2px 6px', 
-                    borderRadius: 99 
-                }}>
-                    {categoryCounts[cat]}
-                </span>
-            )}
+            <span style={{ 
+              fontSize: 10, 
+              background: activeCategory === cat ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.1)', 
+              padding: '2px 6px', 
+              borderRadius: 99 
+            }}>
+              {count}
+            </span>
           </button>
         ))}
       </div>
