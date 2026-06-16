@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Search, CheckCircle2, Star, ListFilter, SortAsc, Plus, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../lib/axios";
@@ -12,7 +12,7 @@ function ProblemsLibrary({ problems, favoriteIds, onToggleFavorite, isSolved, on
   const [usersLoading, setUsersLoading] = useState(false);
 
   // Extract real topics/categories and their counts from the actual problems
-  const { categories, categoryCounts } = React.useMemo(() => {
+  const { categories, categoryCounts } = useMemo(() => {
     const counts = {};
     const cats = new Set(["All Topics"]); // "All Topics" is always the default first option
 
@@ -41,7 +41,7 @@ function ProblemsLibrary({ problems, favoriteIds, onToggleFavorite, isSolved, on
   }, [problems]);
 
   // Extract top tags for the row of tags above the category chips
-  const topTags = React.useMemo(() => {
+  const topTags = useMemo(() => {
       // Get all tags that aren't the main categories we just extracted (to avoid duplication if we want)
       // For simplicity, we just take the top 10 most frequent tags
       const tagEntries = Object.entries(categoryCounts)
