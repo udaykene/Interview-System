@@ -523,22 +523,30 @@ function StudyPlanView({ problems = [] }) {
       {isCreateOpen && (
         <div className="modal-overlay" onClick={() => setIsCreateOpen(false)}>
           <div
-            className="modal-content animate-scale-in"
+            className="modal-content study-plan-create-modal animate-scale-in"
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: 580, padding: 32, borderRadius: 24 }}
+            style={{
+              width: "min(520px, calc(100vw - 32px))",
+              maxWidth: 520,
+              maxHeight: "calc(100vh - 88px)",
+              overflowY: "auto",
+              padding: 24,
+              borderRadius: 18,
+              boxSizing: "border-box",
+            }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 700 }}>New Custom Study Plan</h2>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700 }}>New Custom Study Plan</h2>
               <button
                 onClick={() => setIsCreateOpen(false)}
                 className="btn-icon"
-                style={{ background: "transparent" }}
+                style={{ background: "transparent", width: 34, height: 34 }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateSubmit} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <form onSubmit={handleCreateSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div className="input-group">
                 <label className="sidebar-title" style={{ padding: 0 }}>Title</label>
                 <input
@@ -547,7 +555,7 @@ function StudyPlanView({ problems = [] }) {
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   required
-                  style={{ padding: "12px 16px", borderRadius: 12, fontSize: 14 }}
+                  style={{ padding: "10px 14px", borderRadius: 10, fontSize: 13 }}
                 />
               </div>
 
@@ -559,21 +567,21 @@ function StudyPlanView({ problems = [] }) {
                   rows={2}
                   value={newDescription}
                   onChange={(e) => setNewDescription(e.target.value)}
-                  style={{ padding: "12px 16px", borderRadius: 12, fontSize: 14, resize: "none" }}
+                  style={{ padding: "10px 14px", borderRadius: 10, fontSize: 13, resize: "none" }}
                 />
               </div>
 
               {/* Color Gradient Select */}
               <div>
-                <label className="sidebar-title" style={{ padding: 0, marginBottom: 8, display: "block" }}>Color Gradient</label>
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <label className="sidebar-title" style={{ padding: 0, marginBottom: 6, display: "block" }}>Color Gradient</label>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {colors.map((c) => (
                     <div
                       key={c.value}
                       onClick={() => setNewColor(c.value)}
                       style={{
-                        width: 32,
-                        height: 32,
+                        width: 28,
+                        height: 28,
                         borderRadius: "50%",
                         background: c.value,
                         cursor: "pointer",
@@ -588,15 +596,17 @@ function StudyPlanView({ problems = [] }) {
 
               {/* Icon Select */}
               <div>
-                <label className="sidebar-title" style={{ padding: 0, marginBottom: 8, display: "block" }}>Icon</label>
-                <div style={{ display: "flex", gap: 12 }}>
+                <label className="sidebar-title" style={{ padding: 0, marginBottom: 6, display: "block" }}>Icon</label>
+                <div style={{ display: "flex", gap: 8 }}>
                   {icons.map((ic) => (
                     <div
                       key={ic.name}
                       onClick={() => setNewIcon(ic.name)}
                       style={{
                         padding: 10,
-                        borderRadius: 12,
+                        width: 38,
+                        height: 38,
+                        borderRadius: 10,
                         background: newIcon === ic.name ? "rgba(255, 255, 255, 0.15)" : "rgba(255, 255, 255, 0.03)",
                         border: newIcon === ic.name ? "1px solid rgba(255, 255, 255, 0.3)" : "1px solid transparent",
                         cursor: "pointer",
@@ -606,7 +616,7 @@ function StudyPlanView({ problems = [] }) {
                       }}
                       title={ic.label}
                     >
-                      {getIcon(ic.name, 18, newIcon === ic.name ? "white" : "var(--text-secondary)")}
+                      {getIcon(ic.name, 17, newIcon === ic.name ? "white" : "var(--text-secondary)")}
                     </div>
                   ))}
                 </div>
@@ -614,14 +624,14 @@ function StudyPlanView({ problems = [] }) {
 
               {/* Problem Selector checklist */}
               <div>
-                <label className="sidebar-title" style={{ padding: 0, marginBottom: 8, display: "block" }}>
+                <label className="sidebar-title" style={{ padding: 0, marginBottom: 6, display: "block" }}>
                   Add Problems ({selectedProblems.length} Selected)
                 </label>
                 <div
                   style={{
                     display: "flex",
-                    gap: 10,
-                    marginBottom: 12,
+                    gap: 8,
+                    marginBottom: 8,
                   }}
                 >
                   <div style={{ position: "relative", flex: 1 }}>
@@ -639,6 +649,7 @@ function StudyPlanView({ problems = [] }) {
                         paddingLeft: 34,
                         borderRadius: 10,
                         fontSize: 12,
+                        height: 38,
                         background: "rgba(255,255,255,0.03)",
                         border: "1px solid rgba(255,255,255,0.06)",
                       }}
@@ -650,6 +661,8 @@ function StudyPlanView({ problems = [] }) {
                     style={{
                       padding: "8px 12px",
                       borderRadius: 10,
+                      minWidth: 130,
+                      height: 38,
                       background: "#151515",
                       border: "1px solid rgba(255,255,255,0.06)",
                       color: "var(--text-secondary)",
@@ -667,12 +680,12 @@ function StudyPlanView({ problems = [] }) {
 
                 <div
                   style={{
-                    maxHeight: 180,
+                    maxHeight: 136,
                     overflowY: "auto",
                     background: "rgba(0,0,0,0.2)",
-                    borderRadius: 12,
+                    borderRadius: 10,
                     border: "1px solid rgba(255,255,255,0.06)",
-                    padding: 8,
+                    padding: 6,
                   }}
                 >
                   {filteredProblems.length === 0 ? (
@@ -687,8 +700,8 @@ function StudyPlanView({ problems = [] }) {
                         style={{
                           display: "flex",
                           alignItems: "center",
-                          gap: 10,
-                          padding: "8px 10px",
+                          gap: 8,
+                          padding: "7px 9px",
                           borderRadius: 8,
                           cursor: "pointer",
                           background: selectedProblems.includes(prob._id)
@@ -720,12 +733,12 @@ function StudyPlanView({ problems = [] }) {
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", marginTop: 12 }}>
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 4 }}>
                 <button
                   type="button"
                   onClick={() => setIsCreateOpen(false)}
                   className="btn-ghost"
-                  style={{ borderRadius: 12 }}
+                  style={{ borderRadius: 10, padding: "9px 16px" }}
                 >
                   Cancel
                 </button>
@@ -733,8 +746,8 @@ function StudyPlanView({ problems = [] }) {
                   type="submit"
                   className="btn-primary"
                   style={{
-                    borderRadius: 12,
-                    padding: "10px 24px",
+                    borderRadius: 10,
+                    padding: "9px 20px",
                     background: "var(--accent-violet)",
                     color: "white",
                     fontWeight: 600,
