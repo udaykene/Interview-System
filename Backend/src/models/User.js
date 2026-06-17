@@ -83,7 +83,16 @@ const UserSchema = new mongoose.Schema(
     stats: {
       sessionCount: { type: Number, default: 0 },
       problemsSolved: { type: Number, default: 0 },
+      xp: { type: Number, default: 0 },
+      streak: { type: Number, default: 0 },
+      lastActiveDate: { type: String, default: "" },
     },
+    badges: [
+      {
+        badgeId: { type: mongoose.Schema.Types.ObjectId, ref: "Badge" },
+        earnedAt: { type: Date, default: Date.now },
+      },
+    ],
     favorites: [
       {
         type: mongoose.Schema.Types.ObjectId,

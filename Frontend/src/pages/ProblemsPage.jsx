@@ -6,6 +6,7 @@ import ProblemsLibrary from "../components/ProblemsLibrary";
 import StudyPlanView from "../components/StudyPlanView";
 import PlaylistView from "../components/PlaylistView";
 import CreateListModal from "../components/CreateListModal";
+import QuestView from "../components/QuestView";
 import AddToListPopover from "../components/AddToListPopover";
 import { useProblems, useToggleFavorite, useFavorites } from "../hooks/useProblems";
 import { usePlaylists, useCreatePlaylist, useAddProblemToPlaylist, useRemoveProblemFromPlaylist } from "../hooks/usePlaylists";
@@ -84,6 +85,10 @@ function ProblemsPage() {
 
     if (activeView === "study-plan") {
       return <StudyPlanView problems={problems} />;
+    }
+
+    if (activeView === "quest") {
+      return <QuestView />;
     }
 
     if (activeView === "favorites") {

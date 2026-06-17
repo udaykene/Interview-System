@@ -18,6 +18,12 @@ import {
   UserMinus,
   Loader2,
   ChevronLeft,
+  Flame,
+  Trophy,
+  Shield,
+  Crown,
+  Gem,
+  Sparkles
 } from "lucide-react";
 import axiosInstance from "../lib/axios";
 import toast from "react-hot-toast";
@@ -33,6 +39,26 @@ const fadeUp = (delay = 0) => ({
   animate: { opacity: 1, y: 0 },
   transition: { delay, duration: 0.5, ease: [0.16, 1, 0.3, 1] },
 });
+
+const getBadgeIcon = (iconName, size = 18, color = "#ffa116") => {
+  switch (iconName) {
+    case "Flame":
+      return <Flame size={size} color={color} fill={color} />;
+    case "Trophy":
+      return <Trophy size={size} color={color} />;
+    case "Shield":
+      return <Shield size={size} color={color} />;
+    case "Star":
+      return <Star size={size} color={color} fill={color} />;
+    case "Crown":
+      return <Crown size={size} color={color} />;
+    case "Gem":
+      return <Gem size={size} color={color} />;
+    case "Award":
+    default:
+      return <Award size={size} color={color} />;
+  }
+};
 
 /* ─── Activity Heatmap & Streaks ─────────────────── */
 function ProfileActivity({ activityMap = {} }) {
@@ -1121,7 +1147,8 @@ function ProfilePage() {
                       padding: 24,
                       display: "flex",
                       flexDirection: "column",
-                      justifyContent: "space-between",
+                      justifyContent: "flex-start",
+                      minHeight: 180,
                     }}
                   >
                     <div>
@@ -1139,59 +1166,46 @@ function ProfilePage() {
                         Badges
                       </div>
                       <div
-                        style={{ fontSize: 36, fontWeight: 800, color: "white" }}
+                        style={{ fontSize: 36, fontWeight: 800, color: "white", marginBottom: 16 }}
                       >
-                        0
+                        {userToShow?.badges?.length || 0}
                       </div>
                     </div>
 
-                    <div style={{ marginTop: "auto" }}>
-                      <div
-                        style={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: "#6b7280",
-                          letterSpacing: "0.06em",
-                          textTransform: "uppercase",
-                          marginBottom: 10,
-                        }}
-                      >
-                        Locked Badge
-                      </div>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 12,
-                          cursor: "pointer",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: "50%",
-                            background: "rgba(255,255,255,0.04)",
-                            border: "1px solid rgba(255,255,255,0.08)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            opacity: 0.5,
-                          }}
-                        >
-                          <Award size={18} color="#4b5563" />
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 10, overflowY: "auto", maxHeight: 120, paddingRight: 4 }}>
+                      {userToShow?.badges && userToShow.badges.length > 0 ? (
+                        userToShow.badges.map((b) => {
+                          const badge = b.badgeId;
+                          if (!badge) return null;
+                          return (
+                            <div
+                              key={badge._id}
+                              title={`${badge.name}: ${badge.description}`}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                padding: "6px 12px",
+                                borderRadius: 8,
+                                background: `${badge.color || "#ffa116"}15`,
+                                border: `1px solid ${badge.color || "#ffa116"}30`,
+                                color: badge.color || "#ffa116",
+                              }}
+                            >
+                              <span style={{ display: "flex", alignItems: "center" }}>
+                                {getBadgeIcon(badge.icon, 15, badge.color)}
+                              </span>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: "white" }}>
+                                {badge.name}
+                              </span>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div style={{ color: "#6b7280", fontSize: 13, fontStyle: "italic", marginTop: 8 }}>
+                          No badges earned yet. Complete quests to earn badges!
                         </div>
-                        <span
-                          style={{
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: "#6b7280",
-                          }}
-                        >
-                          May LeetCoding Challenge
-                        </span>
-                      </div>
+                      )}
                     </div>
                   </motion.div>
                 </div>

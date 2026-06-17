@@ -230,22 +230,28 @@ export const resetPassword = async (req, res) => {
 
 // Get Current User
 export const getMe = async (req, res) => {
-  const user = req.user;
-  res.status(200).json({
-    user: {
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      username: user.username || "",
-      profileImage: user.profileImage,
-      role: user.role,
-      bio: user.bio || "",
-      socialLinks: user.socialLinks || {},
-      stats: user.stats || {},
-      emailVerified: user.emailVerified,
-      provider: user.provider,
-    },
-  });
+  try {
+    const user = await User.findById(req.user._id).populate("badges.badgeId");
+    res.status(200).json({
+      user: {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        username: user.username || "",
+        profileImage: user.profileImage,
+        role: user.role,
+        bio: user.bio || "",
+        socialLinks: user.socialLinks || {},
+        stats: user.stats || {},
+        emailVerified: user.emailVerified,
+        provider: user.provider,
+        badges: user.badges || [],
+      },
+    });
+  } catch (error) {
+    console.error("Error in getMe:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
 };
 
 // Update Profile
@@ -288,25 +294,28 @@ export const updateProfile = async (req, res) => {
       { new: true, runValidators: true }
     );
 
+    const populated = await User.findById(updated._id).populate("badges.badgeId");
+
     await upsertStreamUser({
       id: userId.toString(),
-      name: updated.name,
-      image: updated.profileImage,
+      name: populated.name,
+      image: populated.profileImage,
     });
 
     res.status(200).json({
       user: {
-        id: updated._id.toString(),
-        name: updated.name,
-        email: updated.email,
-        username: updated.username || "",
-        profileImage: updated.profileImage,
-        role: updated.role,
-        bio: updated.bio || "",
-        socialLinks: updated.socialLinks || {},
-        stats: updated.stats || {},
-        emailVerified: updated.emailVerified,
-        provider: updated.provider,
+        id: populated._id.toString(),
+        name: populated.name,
+        email: populated.email,
+        username: populated.username || "",
+        profileImage: populated.profileImage,
+        role: populated.role,
+        bio: populated.bio || "",
+        socialLinks: populated.socialLinks || {},
+        stats: populated.stats || {},
+        emailVerified: populated.emailVerified,
+        provider: populated.provider,
+        badges: populated.badges || [],
       },
     });
   } catch (error) {
@@ -363,8 +372,9 @@ export const getUserProfile = async (req, res) => {
   const { username } = req.params;
   try {
     const user = await User.findOne({ username: username.toLowerCase() })
-      .select("name username email profileImage bio stats socialLinks role createdAt followers following")
-      .populate("favorites", "title slug difficulty acceptanceRate");
+      .select("name username email profileImage bio stats socialLinks role createdAt followers following badges")
+      .populate("favorites", "title slug difficulty acceptanceRate")
+      .populate("badges.badgeId");
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -386,6 +396,7 @@ export const getUserProfile = async (req, res) => {
         followersCount: user.followers.length,
         followingCount: user.following.length,
         isFollowing: req.user ? user.followers.includes(req.user._id) : false,
+        badges: user.badges || [],
       },
     });
   } catch (error) {
